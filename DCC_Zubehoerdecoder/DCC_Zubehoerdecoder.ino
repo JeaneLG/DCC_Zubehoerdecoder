@@ -291,7 +291,8 @@ void setup() {
       //-----------------------------------
       Wire.begin();                       // I2C-Bus initialisieren
       pwmController.resetDevices();       // Alle PCA9685 Module am I2C Bus resetten
-      pwmController.init();               // Module mit Default Werten initialisieren (totem-pole driver mode, disabled phase balancer)
+ //     pwmController.init();               // Module mit Default Werten initialisieren (totem-pole driver mode, disabled phase balancer)
+      pwmController.init(PCA9685_OutputDriverMode_OpenDrain);  // Module im OpenDrain Modus initialisieren da aktuell nur LEDs gesteuert werden können
       pwmController.setPWMFreqServo();    // 50Hz entspricht der Standard Servo Phasenlänge von 20ms
     #endif
     //--- Ende Grundinitiierung ---------------------------------

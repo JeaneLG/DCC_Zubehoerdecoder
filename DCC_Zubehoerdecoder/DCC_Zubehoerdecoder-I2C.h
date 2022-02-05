@@ -62,21 +62,21 @@ const byte modePin      =   13;     // Anzeige Betriebszustand (Normal/Programmi
 #define SERVOMOD    SAUTOOFF|NOPOSCHK|SDIRECT //|SAUTOBACK
 #define SERVO0MOD   SERVOMOD    // Modbyte für Folgeservo (FSERVO0)
 #define STATICMOD   CAUTOOFF|BLKSOFT|BLKSTRT|STATICRISE    // Wechselblinker mit beiden Leds an beim Start            
-const byte iniTyp[]     =   {    FSERVO,   FSERVO,   FSIGNAL2,   FSIGNAL0,   FVORSIG,    FCOIL };
-const byte out1Pins[]   =   {       A0,        I0,   /*rt*/ 9,   /*rt*/10,  /*ge*/A1,        5 };  // output-pins der Funktionen
-const byte out2Pins[]   =   {        3,        I9,   /*gn*/11,   /*ws*/ 8,  /*gn*/12,        6 };
-const byte out3Pins[]   =   {       NC,        NC,   /*ge*/ 7,         NC,        NC,       NC };
+const byte iniTyp[]     =   {    FSERVO,   FSERVO,    FSTATIC,    FSTATIC,   FSTATIC,  FSTATIC };
+const byte out1Pins[]   =   {       A0,        A1,   /*rt*/I0,   /*rt*/I1,  /*rt*/I2,        5 };  // output-pins der Funktionen
+const byte out2Pins[]   =   {        9,         8,         NC,         NC,        NC,        6 };
+const byte out3Pins[]   =   {       NC,        NC,         NC,         NC,        NC,       NC };
 
 const byte iniCVx[10][sizeof(iniTyp)]  = {
-/* iniFmode (CV120,130,..*/ { SERVOMOD,  SERVOMOD,          0,          0,         0,  COILMOD },
-/* iniPar1 (CV121,131,..*/  {       30,       110,    0b01000,    0b10001,      0b01,       50 },
-/* iniPar2 (CV122,132,..*/  {       80,       160,    0b00010,    0b00110,      0b10,       50 },
-/* iniPar3 (CV123,133,..*/  {       8,          8,          5,          0,        16,        0 },
-/* iniPar4 (CV124,134,..*/  {       0,          0,    0b00101,          0,         0,        0 }, 
-/* iniPar5 (CV125,135,..*/  {       0,          0,    0b01001,          0,         0,        0 },
+/* iniFmode (CV120,130,..*/ { SERVOMOD,  SERVOMOD,          0,          0,         0,        0 },
+/* iniPar1 (CV121,131,..*/  {       30,       110,          0,          0,         0,        0 },
+/* iniPar2 (CV122,132,..*/  {       80,       160,          0,          0,         0,        0 },
+/* iniPar3 (CV123,133,..*/  {       8,          8,          0,          0,         0,        0 },
+/* iniPar4 (CV124,134,..*/  {       0,          0,          0,          0,         0,        0 }, 
+/* iniPar5 (CV125,135,..*/  {       0,          0,          0,          0,         0,        0 },
 /* iniPar6 (CV126,136,..*/  {       0,          0,          0,          0,         0,        0 },
-/* iniPar7 (CV127,137,..*/  {       0,          0,         50,          0,         0,        0 },
-/* iniPar8 (CV128,138,..*/  {       0,          0,        100,          0,         0,        0 },
+/* iniPar7 (CV127,137,..*/  {       0,          0,          0,          0,         0,        0 },
+/* iniPar8 (CV128,138,..*/  {       0,          0,          0,          0,         0,        0 },
 /* iniState (CV129,139,..*/ {       0,          0,          0,          0,         0,        0 }}; // Status-Werte
 //------------------------------------------------------------------------------------
 #endif
