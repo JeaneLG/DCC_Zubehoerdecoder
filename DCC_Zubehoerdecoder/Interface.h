@@ -12,6 +12,20 @@
 
 //#define LOCONET // Wird dies auskommentiert, wird ein DCC-Interface eingebunden
 
+//------------------------------------------ //
+#if !defined(__STM32F1__) && !defined(__AVR_ATmega32U4__)
+  // Verwende I2C Interface
+  #define USE_I2C
+#endif
+#ifdef USE_I2C
+  #include "PCA9685.h"          // include PCA9685 Treiber
+  // Der I2C-Bus verwendet fest die Ausgänge A4 und A5. Sie können also nicht als Ausgänge genutzt werden.
+  // Die Ausgänge des am I2C-Bus angeschlossenen PCA9685 Moduls können über I0 bis I15 angesprochen werden. Das Modul muss die default Adresse 0x40 verwenden.
+  extern PCA9685 pwmController;
+  extern PCA9685_ServoEval pwmServoHelper;
+#endif
+//------------------------------------------ //
+
 //######################################################################################################
 #define NC 0xff    // nicht verwendeten Funktionsausgängen kann der Port NC zugeweisen werden.
 // Da die Prüfung auf ungültige Pin-Nummern in den Arduino-internen Implementierungen je nach Prozessor
@@ -101,8 +115,27 @@ void ifc_setCV( uint16_t address, uint8_t value );
 uint16_t ifc_getAddr();
 void ifc_process();
 
+// Definition der Ausgänge über den I2C Bus an einem PCA9685
+#ifdef USE_I2C
+  static const byte  I0=0xB0;
+  static const byte  I1=0xB1;
+  static const byte  I2=0xB2;
+  static const byte  I3=0xB3;
+  static const byte  I4=0xB4;
+  static const byte  I5=0xB5;
+  static const byte  I6=0xB6;
+  static const byte  I7=0xB7;
+  static const byte  I8=0xB8;
+  static const byte  I9=0xB9;
+  static const byte I10=0xBA;
+  static const byte I11=0xBB;
+  static const byte I12=0xBC;
+  static const byte I13=0xBD;
+  static const byte I14=0xBE;
+  static const byte I15=0xBF;
+#endif
 //======================  allgemeine Hilfsfunktionen ==================================
-// Ausblenden der nicht belegten (NC) Ports
+// Ausblenden der nicht belegten (NC) Ports sowie mappen der I2C Bus Ausgänge in Bus Nachrichten
 #ifdef __STM32F1__
 void _pinMode( byte port, WiringPinMode mode );
 #else

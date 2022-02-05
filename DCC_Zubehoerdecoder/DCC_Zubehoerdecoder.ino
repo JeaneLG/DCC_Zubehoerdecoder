@@ -26,15 +26,12 @@
     So sind z.B. bei Servoausgängen die Endlagen per CV-Wert einstellbar, bei Lichtsignalen ist die 
     Zuordnung der Ausgangszustände zum Signalzustand frei konfigurierbar.
 */
-#define DCC_DECODER_VERSION_ID 0x70
+#define DCC_DECODER_VERSION_ID 0x71
 
 #include "src/FuncClasses.h"
 #ifdef __AVR_MEGA__
 #include <avr/wdt.h>    // für Soft-Reset ( über Watchdog )
 #endif
-
-//------------------------------------------ //
-
 
 #ifdef __STM32F1__
     // ist jetzt im core definiert: #define digitalPinToInterrupt(x) x
@@ -81,9 +78,16 @@
   #pragma message "\n\rbenutztes Konfig-File: DCC_Zubehoerdecoder-Micro.h"
   #endif
 #else
-  #include "DCC_Zubehoerdecoder.h"
-  #ifndef KONFIG_FILE
-  #pragma message "\n\rbenutztes Konfiig-File DCC_Zubehoerdecoder.h"
+  #ifdef USE_I2C
+    #include "DCC_Zubehoerdecoder-I2C.h"
+    #ifndef KONFIG_FILE
+    #pragma message "\n\rbenutztes Konfiig-File DCC_Zubehoerdecoder-I2C.h"
+    #endif    
+  #else
+    #include "DCC_Zubehoerdecoder.h"
+    #ifndef KONFIG_FILE
+    #pragma message "\n\rbenutztes Konfiig-File DCC_Zubehoerdecoder.h"
+    #endif
   #endif
 #endif
 #ifdef KONFIG_FILE
@@ -283,6 +287,13 @@ void setup() {
     // Encoder-Init
     IniEncoder();
 
+    #ifdef USE_I2C
+      //-----------------------------------
+      Wire.begin();                       // I2C-Bus initialisieren
+      pwmController.resetDevices();       // Alle PCA9685 Module am I2C Bus resetten
+      pwmController.init();               // Module mit Default Werten initialisieren (totem-pole driver mode, disabled phase balancer)
+      pwmController.setPWMFreqServo();    // 50Hz entspricht der Standard Servo Phasenlänge von 20ms
+    #endif
     //--- Ende Grundinitiierung ---------------------------------
     
     setWeichenAddr(); // 1. Weichenadresse berechnen

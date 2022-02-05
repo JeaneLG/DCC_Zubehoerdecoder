@@ -18,17 +18,43 @@
 
 
 //####################  allgemeine Hilfsfunktionen ##############################
+#ifdef USE_I2C
+  // Der I2C-Bus verwendet fest die Ausgänge A4 und A5. Sie können also nicht als Ausgänge genutzt werden.
+  // Die Ausgänge des am I2C-Bus angeschlossenen PCA9685 Moduls können über I0 bis I15 angesprochen werden. Das Modul muss die default Adresse 0x40 verwenden.
+  PCA9685 pwmController(Wire);  // Library using Wire @400kHz, and default B000000 (A5-A0) i2c address (0x40)
+  PCA9685_ServoEval pwmServoHelper(102, 310, 505); // (0deg, 90deg, 180deg)
+#endif
 // Ausblenden der nicht belegten (NC) Ports
 #ifdef __STM32F1__
 void _pinMode( byte port, WiringPinMode mode ) {
 #else
 void _pinMode( byte port, byte mode ) {
 #endif
+#ifdef USE_I2C
+	if ( (port & I0) == I0 ) {
+		#ifdef DEBUG
+		  DB_PRINT( "_pinMode: I2C Address detected: %d", (port & I0) - I0 );
+		#endif
+	}
+	else if ( port != NC ) pinMode( port,  mode );
+#else
     if ( port != NC ) pinMode( port,  mode );
+#endif
 }
 
 void _digitalWrite( byte port, byte state ) {
+#ifdef USE_I2C
+	if ( (port & I0) == I0 ) {
+		#ifdef DEBUG
+		  DB_PRINT( "_digitalWrite: I2C Address detected: %d", (port & I0) - I0 );
+		#endif
+		if (state) pwmController.setChannelOn((port & I0) - I0);
+		else pwmController.setChannelOff((port & I0) - I0);
+	}
+	else if ( port != NC ) digitalWrite( port, state );
+#else
     if( port != NC ) digitalWrite( port, state );
+#endif
 }
 //#########################  Klassendefinitionen #################################
 

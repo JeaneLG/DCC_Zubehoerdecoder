@@ -116,7 +116,7 @@ class Fservo {
     void set( uint8_t sollWert );       // neuen Schaltbefehl erhalten
 	bool isMoving ();					// Abfrage ob Servo in Bewegung
 	uint8_t getPos();					// aktuelle Positionsnr. des Servo ermitteln 
-    uint8_t getCvPos();                 // CV-Wert zur aktuellen Position ermitteln
+	uint8_t getCvPos();                 // CV-Wert zur aktuellen Position ermitteln
 	void adjust( uint8_t mode, uint8_t value );	// Servoparamter ändern
 		#define ADJPOS		0			// für Endagenjustierung: value = neue Position
 		#define ADJPOSEND	1			// neue Endlage in CV übernehmen
