@@ -48,8 +48,8 @@ void _digitalWrite( byte port, byte state ) {
 		#ifdef DEBUG
 		  DB_PRINT( "_digitalWrite: I2C Address detected: %d", (port & I0) - I0 );
 		#endif
-		if (state) pwmController.setChannelOn((port & I0) - I0);
-		else pwmController.setChannelOff((port & I0) - I0);
+		if (state) pwmController.setChannelOn(port % I0);
+		else pwmController.setChannelOff(port % I0);
 	}
 	else if ( port != NC ) digitalWrite( port, state );
 #else
