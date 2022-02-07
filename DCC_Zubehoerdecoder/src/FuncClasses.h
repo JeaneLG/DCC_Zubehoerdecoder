@@ -76,6 +76,7 @@ void _digitalWrite( byte port, byte state ) ;
 #define BLKMODE 0x01    // Ausgänge blinken
 #define BLKSTRT 0x02    // Starten mit beide Ausgängen EIN
 #define BLKSOFT 0x04    // Ausgänge als Softleds
+#define FSTAEXT 0x08	// Extended Mode
 // Maske für Param 4 und 5: maximale Helligkeit
 #define MAX_LIGHT 0x7f  // Bitmaske für maximale Helligkeit einer LED
 
