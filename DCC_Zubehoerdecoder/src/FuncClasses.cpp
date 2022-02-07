@@ -155,7 +155,7 @@ Fstatic::Fstatic( int cvAdr, uint8_t ledP[] ) {
         // Ausgangsports als Softleds einrichten
         for ( byte i=0; i<2; i++ ) {
             if ( _ledP[i] != NC ) {
-                _ledS[i] = new SoftLed;
+                _ledS[i] = new MySoftLed;
                 byte att;
                 int rise;
                 att=_ledS[i]->attach( _ledP[i] );
@@ -231,6 +231,9 @@ void Fstatic::process( ) {
             }
         }
     }
+    // LEDs triggern. Notwendig für Ein- und Ausblenden der LEDs am I2C Bus
+    _processLed(0);
+    _processLed(1);
 }
 
 //..............    
@@ -240,6 +243,10 @@ void Fstatic::_setLedPin( uint8_t ledI, uint8_t sollWert ) {
         if ( _ledS[ledI] != NULL ) _ledS[ledI]->write( sollWert);
         else _digitalWrite( _ledP[ledI], sollWert );
     }
+}
+void Fstatic::_processLed(uint8_t ledI) {
+    // für die Ausgänge am I2C Bus muss das Auf- und Abblenden gesteuert werden
+    if ( _ledS[ledI] != NULL ) _ledS[ledI]->process();
 }
 
 //----------------------------- FSERVO --------------------------------------------
@@ -425,7 +432,7 @@ Fsignal::Fsignal( int cvAdr, uint8_t pins[], uint8_t pinAnz, Fsignal** vorSig ){
     _vorSig = vorSig;   // == NULL wenn kein Vorsignal am Mast
     // Zahl der zugeordneten Ausgangsports (maximal 8 genutzt)
     _outP = pins;
-    _sigLed = new SoftLed*[_pinAnz] ;
+    _sigLed = new MySoftLed*[_pinAnz] ;
     _fktStatus.sigBild=0x7; // ungültiges Signalbild
     _fktStatus.state = SIG_WAIT;
     _fktStatus.dark = false;
@@ -447,7 +454,7 @@ Fsignal::Fsignal( int cvAdr, uint8_t pins[], uint8_t pinAnz, Fsignal** vorSig ){
             } else {
                 // Bit = 0 -> Softled
                 byte att; // nur für Testzwecke ( DBSG_PRINT )
-                _sigLed[pIx] = new SoftLed;
+                _sigLed[pIx] = new MySoftLed;
                 att=_sigLed[pIx]->attach( _outP[pIx] , getParam( LSMODE ) & LEDINVERT );
                 _sigLed[pIx]->riseTime( SIG_RISETIME );
                 _sigLed[pIx]->write( OFF, BULB );
@@ -502,7 +509,6 @@ void Fsignal::set( uint8_t sollWert ) {
             DBSG_PRINT("Ende set %d", _cvAdr );
         }
     }
-    
 }
 //..............    
 // Umschalten des Signalbilds steuern ( muss im loop() aufgerufen werden )

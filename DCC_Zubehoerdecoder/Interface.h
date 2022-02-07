@@ -6,6 +6,9 @@
 #ifndef INTERFACE_H
 #define INTERFACE_H
 
+// debug mode
+//#define DEBUG
+
 #include <inttypes.h>
 #include <Arduino.h>
 #include "src/DebugDefs.h"
@@ -143,7 +146,5 @@ void _pinMode( byte port, byte mode );
 #endif
 
 void _digitalWrite( byte port, byte state ) ;
-
-
 
 #endif

@@ -4,8 +4,8 @@
  * Für jede im Konfig-File definierte Funktion muss ein passendes Objekt instanziiert werden.
  * Die Instanziierung muss im setup() mit 'new' erfolgen.
  */
-#include <MobaTools.h>
 #include "../Interface.h"
+#include "../MyMobaTools.h"
 
 #define PPWA 3                  // Zahl der Pins je Weichenadresse
 
@@ -87,10 +87,12 @@ void _digitalWrite( byte port, byte state ) ;
 
     private:
     void _setLedPin( uint8_t ledI, uint8_t sollWert );
+    void _processLed(uint8_t ledI);
+    
     MoToTimer _pulseT;
     
     uint16_t _cvAdr;            // Adresse des CV-Blocks mit den Funktionsparametern
-    SoftLed *_ledS[2] = { NULL, NULL };      // Softled-Objekte
+    MySoftLed *_ledS[2] = { NULL, NULL };      // Softled-Objekte
     uint8_t *_ledP;           // Pins der Leds
     struct {
         bool blkOn :1;      // blinkende Led ist EIN
@@ -182,17 +184,17 @@ const byte  LSMODE=0,                 BILD1=1,              BILD2=2, VORSIG=3,  
     void    _clrSignal (byte);         // SoftLed's ausschalten - Bits die im Parameter geetzt sind, werden nicht ausgeschaltet
     void    _setSignal ();             // aktuelles Signalbild einschalten
     void    _setSignalStatic ();       // aktuelles Signalbild einschalten ( statische Led's )
-    void    _setSignalBlink ();         // aktuelles Signalbild schalten ( blionkede Led's )
+    void    _setSignalBlink ();        // aktuelles Signalbild schalten ( blinkede Led's )
     uint8_t _getHsMask ();             // Maske für Hard/Soft Umschaltung aller Ausgänge bestimmen
     void    _getSigMask( uint8_t ) ;   // Bitmaske der Ausgänge für aktuelles Signalbild bestimmen
     
     Fsignal **_vorSig;              // Pointer auf Vorsignal am gleichen Mast
     MoToTimer darkT;                // Dunkelzeit beim Überblenden zwischen Signalbildern
-    MoToTimer _blinkT;               // Timer für blinkende Signalbilder
+    MoToTimer _blinkT;              // Timer für blinkende Signalbilder
     uint16_t _cvAdr = 0;            // Adresse des CV-Blocks mit den Funktionsparametern
     uint8_t  _pinAnz;               // Zahl der zugeordnten Ausgangspins : 3(PPWA) je CV-Block 
     uint8_t *_outP;           		// Array mit Pins der Ausgänge
-    SoftLed **_sigLed;              // Pointer auf Array der Softled Objekte
+    MySoftLed **_sigLed;              // Pointer auf Array der Softled Objekte
     struct {
         byte state   :2;            // Status der internen State-Machine
         byte sigBild :3;            // aktuelles Signalbild entsprechend letztem sollwert
