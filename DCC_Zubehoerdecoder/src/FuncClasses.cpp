@@ -150,15 +150,25 @@ Fstatic::Fstatic( int cvAdr, uint8_t ledP[] ) {
     _cvAdr = cvAdr;
     _ledP = ledP;
     DBST_PRINT( "Fstatic CV=%d, LedPis %d,%d ", _cvAdr, _ledP[0], _ledP[1] );
+    _flags.invert[0] = (getParam(PAR4) >> 7);        // soll der Ausgang 1 invertiert geschaltet werden?
+    _flags.invert[1] = (getParam(PAR5) >> 7);        // soll der Ausgang 2 invertiert geschaltet werden?
+    _flags.maxOn[0] = getParam(PAR4) & MAX_LIGHT;
+    _flags.maxOn[1] = getParam(PAR5) & MAX_LIGHT;
+    if (_flags.maxOn[0] == 0) _flags.maxOn[0] = 100; // wenn maximale Helligkeit nicht gesetzt ist die auf maximum setzen
+    if (_flags.maxOn[1] == 0) _flags.maxOn[1] = 100;
     // Modi der Ausgangsports
+  #ifdef USE_I2C
+    if ((getParam( MODE ) & BLKSOFT ) || (_flags.maxOn[0] < 100) || (_flags.maxOn[1] < 100)) {
+  #else
     if ( getParam( MODE ) & BLKSOFT ) {
+  #endif
         // Ausgangsports als Softleds einrichten
         for ( byte i=0; i<2; i++ ) {
             if ( _ledP[i] != NC ) {
                 _ledS[i] = new MySoftLed;
                 byte att;
                 int rise;
-                att=_ledS[i]->attach( _ledP[i] );
+                att=_ledS[i]->attach( _ledP[i], _flags.invert[i]);
                 rise = (getParam(MODE) >> 4) * 100;
                 if ( rise == 0 ) rise = 500; // defaultwert
                 _ledS[i]->riseTime( rise );
@@ -240,8 +250,14 @@ void Fstatic::process( ) {
 void Fstatic::_setLedPin( uint8_t ledI, uint8_t sollWert ) {
     // den LED ausgang 1/2 setzen. je nach Konfiguration als Softled oder hart
     if ( ledI <2 ) {
-        if ( _ledS[ledI] != NULL ) _ledS[ledI]->write( sollWert);
-        else _digitalWrite( _ledP[ledI], sollWert );
+        if ( _ledS[ledI] != NULL ) {
+            if (sollWert) _ledS[ledI]->on(_flags.maxOn[ledI]);
+            else _ledS[ledI]->off();
+        }
+        else {
+            if (_flags.invert[ledI]) _digitalWrite( _ledP[ledI], !sollWert );
+            else _digitalWrite( _ledP[ledI], sollWert );
+        }
     }
 }
 void Fstatic::_processLed(uint8_t ledI) {

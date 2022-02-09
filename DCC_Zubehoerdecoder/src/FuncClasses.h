@@ -76,7 +76,8 @@ void _digitalWrite( byte port, byte state ) ;
 #define BLKMODE 0x01    // Ausgänge blinken
 #define BLKSTRT 0x02    // Starten mit beide Ausgängen EIN
 #define BLKSOFT 0x04    // Ausgänge als Softleds
-
+// Maske für Param 4 und 5: maximale Helligkeit
+#define MAX_LIGHT 0x7f  // Bitmaske für maximale Helligkeit einer LED
 
  class Fstatic {
     // statisches oder blinkendes Ansteuern von Led's
@@ -95,8 +96,10 @@ void _digitalWrite( byte port, byte state ) ;
     MySoftLed *_ledS[2] = { NULL, NULL };      // Softled-Objekte
     uint8_t *_ledP;           // Pins der Leds
     struct {
-        bool blkOn :1;      // blinkende Led ist EIN
-        bool isOn  :1;      // Funktion is eingeschaltet
+        bool blkOn  :1;      // blinkende Led ist EIN
+        bool isOn   :1;      // Funktion ist eingeschaltet
+        bool invert[2];      // Invertiere Ausgänge
+        byte maxOn[2];       // maximale Helligkeit
     } _flags;       
     
  };

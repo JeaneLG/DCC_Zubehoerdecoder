@@ -10,7 +10,7 @@ MySoftLed::MySoftLed() {
 }
 
 #ifdef USE_I2C
-uint8_t MySoftLed::attach(uint8_t pinArg, uint8_t invArg = false ) {
+uint8_t MySoftLed::attach(uint8_t pinArg, uint8_t invArg) {
   // Led-Ausgang mit Softstart.
   if ((pinArg & I0) == I0) {
     byte i2cPin = pinArg - I0;
@@ -70,7 +70,7 @@ void MySoftLed::process() {
   if (isI2C) pSoftLed.i2cSoftLed->process();
 }
 #else
-uint8_t MySoftLed::attach(uint8_t pinArg, uint8_t invArg = false ) {
+uint8_t MySoftLed::attach(uint8_t pinArg, uint8_t invArg) {
   pSoftLed.motoSoftLed->attach(pinArg, invArg);
 }
 void MySoftLed::riseTime( uint16_t time) {
@@ -108,7 +108,7 @@ I2cSoftLed::I2cSoftLed() {
   _ledData.state = NOTATTACHED;
 }
 #ifdef USE_I2C
-uint8_t I2cSoftLed::attach(uint8_t i2cPin, uint8_t invArg = false ) {
+uint8_t I2cSoftLed::attach(uint8_t i2cPin, uint8_t invArg) {
   // Led-Ausgang mit Softstart.
   _ledData.pin = i2cPin;    // i2c Pin-Nbr
   _ledData.invFlg = invArg;
