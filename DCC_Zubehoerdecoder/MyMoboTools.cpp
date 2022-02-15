@@ -249,4 +249,129 @@ void I2cSoftLed::_set(uint8_t pwm) {
   }
   pwmController.setChannelPWM(_ledData.pin, absPwm);
 }
+
+// ---------------------------------------------------------------------------------------------
+I2cServo::I2cServo(){
+  
+}
+uint8_t I2cServo::attach(int pin, bool autoOff){
+  return 0;
+}
+void I2cServo::detach(){
+  
+}
+
+
+MyServo::MyServo(){
+  isI2C = false;
+}
+uint8_t MyServo::attach(int pin){
+  // attach to a pin, sets pinMode, returns 0 on failure, won't
+  // position the servo until a subsequent write() happens
+  return attach(pin, false);
+}
+//Es wird nur diese Version der attach Methode aufgerufen
+uint8_t MyServo::attach(int pin, bool autoOff){
+  if ((pin & I0) == I0) {
+    byte i2cPin = pin - I0;
+    if (pServo.i2cServo == NULL) pServo.i2cServo = new I2cServo();
+    isI2C = true;
+    return pServo.i2cServo->attach(pin, autoOff);
+  }
+  if (pServo.motoServo == NULL) pServo.motoServo = new MoToServo();
+  pServo.motoServo->attach(pin, autoOff);
+}
+// diese Methode wird von Fservo nicht aufgerufen
+uint8_t MyServo::attach(int pin, uint16_t pos0, uint16_t pos180){
+  // also sets position values (in us) for angele 0 and 180
+  return attach(pin, pos0, pos180, false);
+}
+// diese Methode wird von Fservo nicht aufgerufen
+uint8_t MyServo::attach(int pin, uint16_t pos0, uint16_t pos180, bool autoOff){
+  return 0;
+}
+// diese Methode wird von Fservo nicht aufgerufen
+void MyServo::detach(){
+  if (isI2C) {
+    pServo.i2cServo->detach();
+    delete (pServo.i2cServo);
+    pServo.i2cServo = NULL;
+  }
+  else {
+    pServo.motoServo->detach();
+    delete (pServo.motoServo);
+    pServo.motoServo = NULL;
+  }
+}
+void MyServo::write(uint16_t degree){
+  // specify the angle in degrees, 0 to 180. Values obove 180 are interpreted
+  // as microseconds, limited to MaximumPulse and MinimumPulse
+  if (isI2C) {
+    
+  }
+  else {
+    pServo.motoServo->write(degree);
+  }
+}
+void MyServo::setSpeed(int speed){
+  // Set movement speed, the higher the faster
+  // Zero means no speed control (default)
+  if (isI2C) {
+    
+  }
+  else {
+    pServo.motoServo->setSpeed(speed);
+  }
+}
+// diese Methode wird von Fservo nicht aufgerufen
+void MyServo::setSpeed(int speed, bool comp){
+  setSpeed(speed); 
+}
+
+uint8_t MyServo::moving(){
+  // returns the remaining Way to the angle last set with write() in
+  // in percentage. '0' means, that the angle is reached
+  if (isI2C) {
+    return 0;
+  }
+  else {
+    return pServo.motoServo->moving();
+  }
+}
+uint8_t MyServo::read(){
+  // current position in degrees (0...180)
+  if (isI2C) {
+    return 0;
+  }
+  else {
+    return pServo.motoServo->read();
+  }
+}
+// diese Methode wird von Fservo nicht aufgerufen
+uint16_t  MyServo::readMicroseconds(){
+  // current pulsewidth in microseconds
+  if (isI2C) {
+    return 0;
+  }
+  else {
+    return pServo.motoServo->readMicroseconds();
+  }  
+}
+// diese Methode wird von Fservo nicht aufgerufen
+uint8_t MyServo::attached(){
+  if (isI2C) {
+    return 0;
+  }
+  else {
+    return pServo.motoServo->attached();
+  }
+}
+// diese Methode wird von Fservo nicht aufgerufen
+void MyServo::setMinimumPulse(uint16_t){
+  // pulse length for 0 degrees in microseconds, 700uS default
+}
+// diese Methode wird von Fservo nicht aufgerufen
+void MyServo::setMaximumPulse(uint16_t){
+  // pulse length for 180 degrees in microseconds, 2300uS default
+}
 #endif

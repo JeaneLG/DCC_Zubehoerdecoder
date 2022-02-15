@@ -42,11 +42,6 @@ class I2cSoftLed {
 #endif
 };
 
-union {
-  MoToSoftLed *motoSoftLed;
-  I2cSoftLed *i2cSoftLed;
-}PtrSoftLed;
-
 class MySoftLed {
   public:
     MySoftLed();
@@ -68,3 +63,52 @@ class MySoftLed {
       I2cSoftLed *i2cSoftLed;
     }pSoftLed;
 };
+
+#ifdef USE_I2C
+class I2cServo {
+  public:
+    I2cServo();
+    uint8_t attach( int pin, bool autoOff );        // automatic switch off pulses with constant length
+    void detach();
+
+};
+
+
+class MyServo
+{
+  public:
+    // don't allow copying and moving of Servo objects
+    MyServo &operator= (const MyServo & )   =delete;
+    MyServo &operator= (MyServo && )        =delete;
+    MyServo (const MyServo & )              =delete;
+    MyServo (MyServo && )                   =delete;
+    
+    MyServo();
+    uint8_t attach(int pin); // attach to a pin, sets pinMode, returns 0 on failure, won't
+                             // position the servo until a subsequent write() happens
+    uint8_t attach( int pin, bool autoOff );        // automatic switch off pulses with constant length
+    uint8_t attach(int pin, uint16_t pos0, uint16_t pos180 ); // also sets position values (in us) for angele 0 and 180
+    uint8_t attach(int pin, uint16_t pos0, uint16_t pos180, bool autoOff );
+    void detach();
+    void write(uint16_t);    // specify the angle in degrees, 0 to 180. Values obove 180 are interpreted
+                             // as microseconds, limited to MaximumPulse and MinimumPulse
+    void setSpeed(int);      // Set movement speed, the higher the faster
+                             // Zero means no speed control (default)
+    void setSpeed(int,bool); // Set compatibility-Flag (true= compatibility with version V08 and earlier)
+    
+    uint8_t moving();        // returns the remaining Way to the angle last set with write() in
+                             // in percentage. '0' means, that the angle is reached
+    uint8_t read();          // current position in degrees (0...180)
+    uint16_t  readMicroseconds();// current pulsewidth in microseconds
+    uint8_t attached();
+    void setMinimumPulse(uint16_t);  // pulse length for 0 degrees in microseconds, 700uS default
+    void setMaximumPulse(uint16_t);  // pulse length for 180 degrees in microseconds, 2300uS default
+    
+  private:
+    bool isI2C;
+    union {
+      MoToServo *motoServo;
+      I2cServo  *i2cServo;
+    }pServo;
+};
+#endif

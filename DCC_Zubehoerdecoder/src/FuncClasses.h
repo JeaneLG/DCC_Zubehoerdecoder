@@ -123,7 +123,7 @@ class Fservo {
 	uint8_t getPos();					// aktuelle Positionsnr. des Servo ermitteln 
 	uint8_t getCvPos();                 // CV-Wert zur aktuellen Position ermitteln
 	void adjust( uint8_t mode, uint8_t value );	// Servoparamter ändern
-		#define ADJPOS		0			// für Endagenjustierung: value = neue Position
+		#define ADJPOS		0			// für Endlagenjustierung: value = neue Position
 		#define ADJPOSEND	1			// neue Endlage in CV übernehmen
 		#define ADJSPEED	2			// Servogeschwindigkeit ändern
     void center( uint8_t mode );
@@ -133,7 +133,11 @@ class Fservo {
     private:
     // offset für die CV's der Positionswerte
     static const uint8_t posOffset[6];
+  #ifdef USE_I2C
+    MyServo    _weicheS;
+  #else
     MoToServo  _weicheS;
+  #endif
     MoToTimer  _autoTime;           // zum automatischen Zurückfahren
     uint16_t _cvAdr = 0;            // Adresse des CV-Blocks mit den Funktionsparametern
     int8_t   _modeOffs = 0;         // Offset der CV-Adresse für das Mode-byte. Normalerweise ist dies 0

@@ -21,7 +21,7 @@
 #ifdef USE_I2C
   // Der I2C-Bus verwendet fest die Ausgänge A4 und A5. Sie können also nicht als Ausgänge genutzt werden.
   // Die Ausgänge des am I2C-Bus angeschlossenen PCA9685 Moduls können über I0 bis I15 angesprochen werden. Das Modul muss die default Adresse 0x40 verwenden.
-  PCA9685 pwmController(Wire);  // Library using Wire @400kHz, and default B000000 (A5-A0) i2c address (0x40)
+  PCA9685 pwmController((PCA9685_ADDRESS), Wire);  // Library using Wire @400kHz, and default B000000 (A5-A0) i2c address (0x40)
   PCA9685_ServoEval pwmServoHelper(102, 310, 505); // (0deg, 90deg, 180deg)
 #endif
 // Ausblenden der nicht belegten (NC) Ports
@@ -31,7 +31,7 @@ void _pinMode( byte port, WiringPinMode mode ) {
 void _pinMode( byte port, byte mode ) {
 #endif
 #ifdef USE_I2C
-	if ( (port & I0) == I0 ) {
+	if ( (port & I0) == I0 ) {                     // Der Pin ist auf dem PCA9685 Controller
 		#ifdef DEBUG
 		  DB_PRINT( "_pinMode: I2C Address detected: %d", (port & I0) - I0 );
 		#endif

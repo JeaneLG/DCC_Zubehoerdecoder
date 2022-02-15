@@ -19,11 +19,13 @@
 #if !defined(__STM32F1__) && !defined(__AVR_ATmega32U4__)
   // Verwende I2C Interface
   #define USE_I2C
+  // Adresse des PCA9685 Moduls. Die Adresse wird hier als offset zur default Adresse 0x40 angegeben.
+  #define PCA9685_ADDRESS B000000
 #endif
 #ifdef USE_I2C
   #include "PCA9685.h"          // include PCA9685 Treiber
   // Der I2C-Bus verwendet fest die Ausgänge A4 und A5. Sie können also nicht als Ausgänge genutzt werden.
-  // Die Ausgänge des am I2C-Bus angeschlossenen PCA9685 Moduls können über I0 bis I15 angesprochen werden. Das Modul muss die default Adresse 0x40 verwenden.
+  // Die Ausgänge des am I2C-Bus angeschlossenen PCA9685 Moduls können über I0 bis I15 angesprochen werden.
   extern PCA9685 pwmController;
   extern PCA9685_ServoEval pwmServoHelper;
 #endif
