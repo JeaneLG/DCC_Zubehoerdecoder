@@ -28,8 +28,8 @@ const byte resModeP     =   A6;     // Rücksetzen CV-Werte + Mittelstellung Ser
 // Eingänge digital (die Ports A0-A5 lassen sich auch digital verwenden): ---------
 
 // Drehencoder zur Servojustierung ...........
-#define ENCODER_DOUBLE  // Eigenschaften des Drehencoders (Impulse per Raststellung)
-#define ENCODER_AKTIV       // Wird diese Zeile auskommentiert, wird der Encoder nicht verwendet. 
+//#define ENCODER_DOUBLE  // Eigenschaften des Drehencoders (Impulse per Raststellung)
+//#define ENCODER_AKTIV       // Wird diese Zeile auskommentiert, wird der Encoder nicht verwendet. 
                             // Die Encoder-Ports werden dann ignoriert, und können anderweitig 
                             // verwendet werden.
 const byte encode1P     =   A3;     // Eingang Drehencoder zur Justierung.
@@ -42,10 +42,10 @@ const byte encode2P     =   A2;
 //-------------------------------------------------------------------------------------------------------
 #define EXTENDED_CV       // CV-Werte ab V7.0 ( 10 CV per Adresse )
 
-const int DccAddr           =  17;    // DCC-Decoderadresse
+const int DccAddr           = 17;    // DCC-Decoderadresse
 const byte iniMode          = AUTOADDR /*| ROCOADDR*/;  // default-Betriebsmodus ( CV47 )
 const int  PomAddr          = 50;    // Adresse für die Pom-Programmierung ( CV48/49 )
-                                    // mit LocoNet-Schnittstelle ist dies die LocoNetId
+                                     // mit LocoNet-Schnittstelle ist dies die LocoNetId
 //#define NOACK                     // Diese Zeile aktivieren, wenn keine HW zum CV auslesen vorhanden ist
                                     // ( kein Ack-Pin ) Der in Interfac.h definierte Pin wird dann zwar als OUTPUT
                                     // gesetzt, kann aber für beliebige Funktionen in der Tabelle unten genutzt werden
@@ -62,22 +62,22 @@ const byte modePin      =   13;     // Anzeige Betriebszustand (Normal/Programmi
 #define SERVOMOD    SAUTOOFF|NOPOSCHK|SDIRECT //|SAUTOBACK
 #define SERVO0MOD   SERVOMOD    // Modbyte für Folgeservo (FSERVO0)
 #define STATICMOD   CAUTOOFF|BLKSOFT|BLKSTRT|STATICRISE    // Wechselblinker mit beiden Leds an beim Start
-//                                 17         18          19         20          21        22        23        24            
-const byte iniTyp[]     =   {    FSERVO,   FSERVO,    FSTATIC,    FSTATIC,   FSTATIC,  FSTATIC,  FSTATIC, FSIGNAL2 };
-const byte out1Pins[]   =   {       A0,        A1,   /*rt*/I0,   /*rt*/ 5,  /*rt*/ 6,        7,       I1,        3 };  // output-pins der Funktionen
-const byte out2Pins[]   =   {        9,         8,         NC,         NC,        NC,       NC,       I2,       NC };
-const byte out3Pins[]   =   {       NC,        NC,         NC,         NC,        NC,       NC,       NC,       NC };
+//                                 17         18          19         20          21        22           
+const byte iniTyp[]     =   {   FSERVO,    FSERVO,    FSTATIC,    FSTATIC,  FSTATIC, FSIGNAL2 };
+const byte out1Pins[]   =   {       A0,        I3,   /*rt*/I0,          7,       I1,        3 };  // output-pins der Funktionen
+const byte out2Pins[]   =   {        9,         8,         NC,         NC,       I2,       NC };
+const byte out3Pins[]   =   {       NC,        NC,         NC,         NC,       NC,       NC };
 
 const byte iniCVx[10][sizeof(iniTyp)]  = {
-/* iniFmode (CV120,130,..*/ { SERVOMOD,  SERVOMOD,          0,          0,         0,        0,      125,        6 },
-/* iniPar1 (CV121,131,..*/  {       30,       110,          0,          0,         0,        0,      240,        1 },
-/* iniPar2 (CV122,132,..*/  {       80,       160,          0,          0,         0,        0,      210,        0 },
-/* iniPar3 (CV123,133,..*/  {       8,          8,          0,          0,         0,        0,      100,        0 },
-/* iniPar4 (CV124,134,..*/  {       0,          0,          0,          0,         0,        0,        0,        0 }, 
-/* iniPar5 (CV125,135,..*/  {       0,          0,          0,          0,         0,        0,        0,        0 },
-/* iniPar6 (CV126,136,..*/  {       0,          0,          0,          0,         0,        0,        0,        0 },
-/* iniPar7 (CV127,137,..*/  {       0,          0,          0,          0,         0,        0,        0,        0 },
-/* iniPar8 (CV128,138,..*/  {       0,          0,          0,          0,         0,        0,        0,        0 },
-/* iniState (CV129,139,..*/ {       0,          0,          0,          1,         0,        0,        1,        0 }}; // Status-Werte
+/* iniFmode (CV120,130,..*/ { SERVOMOD,  SERVOMOD,          0,          0,      125,        6 },
+/* iniPar1 (CV121,131,..*/  {       10,        10,          0,          0,      240,        1 },
+/* iniPar2 (CV122,132,..*/  {      160,       160,          0,          0,      210,        0 },
+/* iniPar3 (CV123,133,..*/  {       10,        10,          0,          0,      100,        0 },
+/* iniPar4 (CV124,134,..*/  {        0,         0,          0,          0,        0,        0 }, 
+/* iniPar5 (CV125,135,..*/  {        0,         0,          0,          0,        0,        0 },
+/* iniPar6 (CV126,136,..*/  {        0,         0,          0,          0,        0,        0 },
+/* iniPar7 (CV127,137,..*/  {        0,         0,          0,          0,        0,        0 },
+/* iniPar8 (CV128,138,..*/  {        0,         0,          0,          0,        0,        0 },
+/* iniState (CV129,139,..*/ {        0,         0,          0,          0,        1,        0 }}; // Status-Werte
 //------------------------------------------------------------------------------------------------------------------
 #endif

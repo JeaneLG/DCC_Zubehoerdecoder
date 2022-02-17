@@ -27,7 +27,6 @@
   // Der I2C-Bus verwendet fest die Ausgänge A4 und A5. Sie können also nicht als Ausgänge genutzt werden.
   // Die Ausgänge des am I2C-Bus angeschlossenen PCA9685 Moduls können über I0 bis I15 angesprochen werden.
   extern PCA9685 pwmController;
-  extern PCA9685_ServoEval pwmServoHelper;
 #endif
 //------------------------------------------ //
 

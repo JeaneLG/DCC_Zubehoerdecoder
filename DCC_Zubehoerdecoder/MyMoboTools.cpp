@@ -252,34 +252,138 @@ void I2cSoftLed::_set(uint8_t pwm) {
 
 // ---------------------------------------------------------------------------------------------
 I2cServo::I2cServo(){
-  
+  #ifdef DEBUG
+    DB_PRINT ("I2cServo::Constructor.");
+  #endif
+  _servoData.pin = 0;
+  _servoData.autoOff = false;
+  _servoData.speed = 0;
+  _servoData.startPos = SERVO_POS_UNKOWN;
+//  _servoData.actPos = SERVO_POS_UNKOWN;
+  _servoData.sollPos = SERVO_POS_UNKOWN;
+  _servoData.isMoving = false;
 }
-uint8_t I2cServo::attach(int pin, bool autoOff){
-  return 0;
+uint8_t I2cServo::attach(byte pin, bool autoOff){
+  _servoData.pin = pin;
+  _servoData.autoOff = autoOff;
+  _servoData.startPos = SERVO_POS_UNKOWN;
+  #ifdef DEBUG
+    DB_PRINT ("I2cServo::attach(). Pin: %d AutoOff: '%d' Start: %d", pin, autoOff, _servoData.startPos);
+  #endif
+  return 1;
 }
 void I2cServo::detach(){
   
+}
+void I2cServo::write(uint16_t degree){
+  // specify the angle in degrees, 0 to 180. Values obove 180 are interpreted
+  // as microseconds, limited to MaximumPulse and MinimumPulse
+  degree = constrain(degree, 0, 180);
+  _servoData.startPos = _servoData.sollPos;
+  _servoData.sollPos = byte(degree);
+  float angl = degree;
+  if ((_servoData.speed >= SERVO_SPEED_MUL) && (_servoData.startPos != SERVO_POS_UNKOWN)) {
+    // Servo mit vorgegebener Geschwindigkeit bewegen
+    servoTimer.setTime(SERVO_UPDATE);
+    _servoData.isMoving = true;
+    if (_servoData.startPos < _servoData.sollPos) {
+      angl = min(_servoData.sollPos, _servoData.startPos+_servoData.speed/SERVO_SPEED_MUL);
+    }
+    else {
+      angl = max(_servoData.sollPos, _servoData.startPos-_servoData.speed/SERVO_SPEED_MUL);
+    }
+  }
+  uint16_t pwm = (angl * PWM_RANGE) / 180 + MIN_SERVO_PWM;
+  #ifdef DEBUG
+    DB_PRINT_("I2cServo::write(). Pin: %d, Degree: '%d',", _servoData.pin, degree);
+    DB_PRINT ("PWM: '%d', StartPos: %d.", pwm, _servoData.startPos);
+  #endif
+  pwmController.setChannelPWM(_servoData.pin, pwm);
+}
+void I2cServo::setSpeed(int speed){
+  _servoData.speed = byte(speed);
+}
+uint8_t I2cServo::read(){
+  float pwm = pwmController.getChannelPWM(_servoData.pin);
+  #ifdef DEBUG
+    DB_PRINT ("I2cServo::read(). Pin %d, pwm: '%d'", _servoData.pin, word(pwm));
+  #endif
+  // PWM in Grad umrechnen. Wertebereich 0° bis 180°.
+  pwm = (pwm - MIN_SERVO_PWM) * 180.0 / PWM_RANGE;
+  return byte(roundf(pwm));
+}
+uint8_t I2cServo::moving(){
+  uint8_t akt = read();
+  #ifdef DEBUG
+    DB_PRINT ("I2cServo::moving(). Pin %d, degree: '%d'", _servoData.pin, akt);
+  #endif
+  if (akt == _servoData.sollPos) return 0;
+  if ((akt <= _servoData.sollPos+1)&&(akt >= _servoData.sollPos-1)) return 0;
+  uint16_t remain = 0;
+  if (_servoData.sollPos > akt) remain = _servoData.sollPos - akt;
+  else remain = akt - _servoData.sollPos;
+  uint8_t distance = 0;
+  if (_servoData.startPos > _servoData.sollPos) distance = _servoData.startPos - _servoData.sollPos;
+  else distance = _servoData.sollPos - _servoData.startPos;
+  remain = remain * 100 / distance;
+  return byte(remain);
+}
+void I2cServo::process(){
+  // so lange der Timer läuft muss nichts getan werden
+  if (servoTimer.running()) return;
+  if (_servoData.isMoving) {
+    // Servo wird mit Geschwindigkeitskontrolle bewegt. Nächsten Schritt berechnen und setzen
+    uint8_t angl;
+    if (_servoData.startPos < _servoData.sollPos) {
+      angl = min(_servoData.sollPos, read()+_servoData.speed/SERVO_SPEED_MUL);
+    }
+    else {
+      angl = max(_servoData.sollPos, read()-_servoData.speed/SERVO_SPEED_MUL);
+    }
+    float tmp = angl;
+    uint16_t pwm = word((tmp * PWM_RANGE) / 180.0 + MIN_SERVO_PWM);
+  #ifdef DEBUG
+    DB_PRINT ("I2cServo::process(). Pin: %d, Degree: '%d', PWM: '%d'", _servoData.pin, angl, pwm);
+  #endif
+    pwmController.setChannelPWM(_servoData.pin, pwm);
+    if (angl == _servoData.sollPos) {
+      // Zielposition ist erreicht
+      _servoData.isMoving = false;
+      _servoData.startPos = _servoData.sollPos;
+      servoTimer.setTime(SERVO_PAUSE);
+    }
+    else {
+      // Zielposition noch nicht erreicht
+      servoTimer.restart();
+    }
+  }
+  else {
+    // Servo wurde nun einige Zeit nicht bewegt
+    if (servoTimer.expired() && _servoData.autoOff){
+      // PWM Signal ausschalten
+      pwmController.setChannelOff(_servoData.pin);
+    }
+  }
 }
 
 
 MyServo::MyServo(){
   isI2C = false;
+  pServo.i2cServo = NULL;
 }
 uint8_t MyServo::attach(int pin){
-  // attach to a pin, sets pinMode, returns 0 on failure, won't
-  // position the servo until a subsequent write() happens
   return attach(pin, false);
 }
 //Es wird nur diese Version der attach Methode aufgerufen
 uint8_t MyServo::attach(int pin, bool autoOff){
   if ((pin & I0) == I0) {
-    byte i2cPin = pin - I0;
+    byte i2cPin = byte(pin - I0);
     if (pServo.i2cServo == NULL) pServo.i2cServo = new I2cServo();
     isI2C = true;
-    return pServo.i2cServo->attach(pin, autoOff);
+    return pServo.i2cServo->attach(i2cPin, autoOff);
   }
   if (pServo.motoServo == NULL) pServo.motoServo = new MoToServo();
-  pServo.motoServo->attach(pin, autoOff);
+  return pServo.motoServo->attach(pin, autoOff);
 }
 // diese Methode wird von Fservo nicht aufgerufen
 uint8_t MyServo::attach(int pin, uint16_t pos0, uint16_t pos180){
@@ -304,10 +408,10 @@ void MyServo::detach(){
   }
 }
 void MyServo::write(uint16_t degree){
-  // specify the angle in degrees, 0 to 180. Values obove 180 are interpreted
+  // specify the angle in degrees, 0 to 180. Values above 180 are interpreted
   // as microseconds, limited to MaximumPulse and MinimumPulse
   if (isI2C) {
-    
+    pServo.i2cServo->write(degree);
   }
   else {
     pServo.motoServo->write(degree);
@@ -317,7 +421,7 @@ void MyServo::setSpeed(int speed){
   // Set movement speed, the higher the faster
   // Zero means no speed control (default)
   if (isI2C) {
-    
+    pServo.i2cServo->setSpeed(speed);
   }
   else {
     pServo.motoServo->setSpeed(speed);
@@ -329,19 +433,13 @@ void MyServo::setSpeed(int speed, bool comp){
 }
 
 uint8_t MyServo::moving(){
-  // returns the remaining Way to the angle last set with write() in
-  // in percentage. '0' means, that the angle is reached
-  if (isI2C) {
-    return 0;
-  }
-  else {
-    return pServo.motoServo->moving();
-  }
+  if (isI2C) return pServo.i2cServo->moving();
+  else return pServo.motoServo->moving();
 }
 uint8_t MyServo::read(){
   // current position in degrees (0...180)
   if (isI2C) {
-    return 0;
+    return pServo.i2cServo->read();
   }
   else {
     return pServo.motoServo->read();
@@ -359,12 +457,8 @@ uint16_t  MyServo::readMicroseconds(){
 }
 // diese Methode wird von Fservo nicht aufgerufen
 uint8_t MyServo::attached(){
-  if (isI2C) {
-    return 0;
-  }
-  else {
-    return pServo.motoServo->attached();
-  }
+  if (isI2C) return 0;
+  else return pServo.motoServo->attached();
 }
 // diese Methode wird von Fservo nicht aufgerufen
 void MyServo::setMinimumPulse(uint16_t){
@@ -373,5 +467,10 @@ void MyServo::setMinimumPulse(uint16_t){
 // diese Methode wird von Fservo nicht aufgerufen
 void MyServo::setMaximumPulse(uint16_t){
   // pulse length for 180 degrees in microseconds, 2300uS default
+}
+void MyServo::process(){
+  if (isI2C) {
+    pServo.i2cServo->process();
+  }
 }
 #endif

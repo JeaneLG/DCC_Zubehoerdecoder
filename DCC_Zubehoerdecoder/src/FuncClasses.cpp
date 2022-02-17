@@ -22,7 +22,6 @@
   // Der I2C-Bus verwendet fest die Ausgänge A4 und A5. Sie können also nicht als Ausgänge genutzt werden.
   // Die Ausgänge des am I2C-Bus angeschlossenen PCA9685 Moduls können über I0 bis I15 angesprochen werden. Das Modul muss die default Adresse 0x40 verwenden.
   PCA9685 pwmController((PCA9685_ADDRESS), Wire);  // Library using Wire @400kHz, and default B000000 (A5-A0) i2c address (0x40)
-  PCA9685_ServoEval pwmServoHelper(102, 310, 505); // (0deg, 90deg, 180deg)
 #endif
 // Ausblenden der nicht belegten (NC) Ports
 #ifdef __STM32F1__
@@ -314,13 +313,16 @@ Fservo::Fservo( int cvAdr, uint8_t pins[], uint8_t posZahl, int8_t modeOffs ) {
 //..............    
 void Fservo::set( uint8_t newPos ) {
     // Befehl 'servo stellen' erhalten
-    if ( newPos >= _posZahl ) newPos = _posZahl-1;   // maximalZhal der Positionswerte
+    if ( newPos >= _posZahl ) newPos = _posZahl-1;   // maximalZahl der Positionswerte
     _sollPos = newPos;
     DBSV_PRINT( "Servo.set(%d): new:%d, soll:%d, max:%d", _outP[0], newPos, _sollPos, _posZahl );
     _flags.sollAct = true;
 }
 //..............    
 void Fservo::process() {
+  #ifdef USE_I2C
+    _weicheS.process();
+  #endif
     // Umstellvorgang kontrollieren
     // Diese Methode muss in jedem loop() Durchlauf aufgerufen werden
     if ( _autoTime.expired() && _sollPos ) {
@@ -339,8 +341,12 @@ void Fservo::process() {
             _weicheS.write( _weicheS.read() );
             _flags.moving = false;; 
         }
-        if ( _weicheS.moving() < 50 ) _flags.relOn = _istPos;
-        if ( _weicheS.moving() == 0 ) {
+        uint8_t moving = _weicheS.moving();
+        #ifdef DEBUG
+        DB_PRINT ("Servo moving %d.", moving);
+        #endif
+        if ( moving < 50 ) _flags.relOn = _istPos;
+        if ( moving == 0 ) {
             // Bewegung abgeschlossen, 'MOVING'-Bit löschen und Lage in CV speichern
             _flags.moving = false; 
             _flags.sollAct = false;

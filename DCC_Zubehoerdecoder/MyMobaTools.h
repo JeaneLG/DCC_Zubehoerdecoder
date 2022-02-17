@@ -3,7 +3,6 @@
 
 
 #ifdef USE_I2C
-#define RISE_STEPS 25
   typedef struct myLedData_t {        // stores all Data for I2cSoftLed
     uint8_t   aStep;                  // actual step between on/off or off/on ( always counts up )
     uint8_t   pwmOn;                  // maximum pwm value in percent in on state
@@ -19,7 +18,8 @@ class I2cSoftLed {
   public:
     I2cSoftLed();
 #ifdef USE_I2C
-    static const unsigned long MAX_PWM = 4096;
+#define RISE_STEPS 25
+#define MAX_PWM 4096
 #define LINEAR     0
 #define BULB       1
     uint8_t attach(uint8_t i2cPin, uint8_t invArg = false);  // Led-pin with soft on
@@ -65,14 +65,40 @@ class MySoftLed {
 };
 
 #ifdef USE_I2C
+
+typedef struct myServoData_t {      // stores all Data for I2cServo
+  byte pin;                         // Outputpin as I2C Port number
+  byte startPos;                    // start Position of servo in degrees
+//  byte actPos;                      // actual commanded position of the servo in degrees
+  byte sollPos;                     // target Position of servo in degrees
+  bool autoOff;                     // Pause PWM signal if servo is not moving
+  bool isMoving;                    // true if servo is moved with speed controll
+  uint8_t speed;                    // Speed of the Servo
+};
+
+#define MIN_SERVO_PWM 100
+#define MAX_SERVO_PWM 510
+#define PWM_RANGE (MAX_SERVO_PWM - MIN_SERVO_PWM)
+#define SERVO_UPDATE 40
+#define SERVO_PAUSE 1000
+#define SERVO_SPEED_MUL 8
+#define SERVO_POS_UNKOWN 0xFFu
 class I2cServo {
   public:
     I2cServo();
-    uint8_t attach( int pin, bool autoOff );        // automatic switch off pulses with constant length
+    uint8_t attach(byte pin, bool autoOff);          // automatic switch off pulses with constant length
     void detach();
+    void write(uint16_t degree);
+    void setSpeed(int speed);                       // Set movement speed, the higher the faster
+    uint8_t moving();                               // returns the remaining Way to the angle last set with write() in
+                                                    // in percentage. '0' means, that the angle is reached
+    uint8_t read();                                 // returns the actual servo position angle
+    void process();
 
+  private:
+    MoToTimer servoTimer;
+    myServoData_t _servoData;
 };
-
 
 class MyServo
 {
@@ -103,6 +129,7 @@ class MyServo
     uint8_t attached();
     void setMinimumPulse(uint16_t);  // pulse length for 0 degrees in microseconds, 700uS default
     void setMaximumPulse(uint16_t);  // pulse length for 180 degrees in microseconds, 2300uS default
+    void process();
     
   private:
     bool isI2C;
