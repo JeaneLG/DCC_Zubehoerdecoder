@@ -69,10 +69,8 @@ class MySoftLed {
 typedef struct myServoData_t {      // stores all Data for I2cServo
   byte pin;                         // Outputpin as I2C Port number
   byte startPos;                    // start Position of servo in degrees
-//  byte actPos;                      // actual commanded position of the servo in degrees
   byte sollPos;                     // target Position of servo in degrees
-  bool autoOff;                     // Pause PWM signal if servo is not moving
-  bool isMoving;                    // true if servo is moved with speed controll
+  byte flags;                       // Servo states and options
   uint8_t speed;                    // Speed of the Servo
 };
 
@@ -83,6 +81,9 @@ typedef struct myServoData_t {      // stores all Data for I2cServo
 #define SERVO_PAUSE 1000
 #define SERVO_SPEED_MUL 8
 #define SERVO_POS_UNKOWN 0xFFu
+#define FLAG_AUTO_OFF     B1        // Pause PWM signal if servo is not moving
+#define FLAG_IN_AUTO_OFF B10        // True if PWM signal is paused
+#define FLAG_IS_MOVING  B100        // true if servo is moved with speed controll
 class I2cServo {
   public:
     I2cServo();

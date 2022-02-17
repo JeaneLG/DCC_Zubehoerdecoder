@@ -342,9 +342,6 @@ void Fservo::process() {
             _flags.moving = false;; 
         }
         uint8_t moving = _weicheS.moving();
-        #ifdef DEBUG
-        DB_PRINT ("Servo moving %d.", moving);
-        #endif
         if ( moving < 50 ) _flags.relOn = _istPos;
         if ( moving == 0 ) {
             // Bewegung abgeschlossen, 'MOVING'-Bit löschen und Lage in CV speichern

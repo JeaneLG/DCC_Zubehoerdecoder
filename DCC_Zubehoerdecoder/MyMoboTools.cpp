@@ -256,16 +256,14 @@ I2cServo::I2cServo(){
     DB_PRINT ("I2cServo::Constructor.");
   #endif
   _servoData.pin = 0;
-  _servoData.autoOff = false;
   _servoData.speed = 0;
   _servoData.startPos = SERVO_POS_UNKOWN;
-//  _servoData.actPos = SERVO_POS_UNKOWN;
   _servoData.sollPos = SERVO_POS_UNKOWN;
-  _servoData.isMoving = false;
+  _servoData.flags = B0;
 }
 uint8_t I2cServo::attach(byte pin, bool autoOff){
   _servoData.pin = pin;
-  _servoData.autoOff = autoOff;
+  if (autoOff) _servoData.flags |= FLAG_AUTO_OFF;
   _servoData.startPos = SERVO_POS_UNKOWN;
   #ifdef DEBUG
     DB_PRINT ("I2cServo::attach(). Pin: %d AutoOff: '%d' Start: %d", pin, autoOff, _servoData.startPos);
@@ -276,16 +274,15 @@ void I2cServo::detach(){
   
 }
 void I2cServo::write(uint16_t degree){
-  // specify the angle in degrees, 0 to 180. Values obove 180 are interpreted
-  // as microseconds, limited to MaximumPulse and MinimumPulse
+  // specify the angle in degrees, 0 to 180.
   degree = constrain(degree, 0, 180);
   _servoData.startPos = _servoData.sollPos;
   _servoData.sollPos = byte(degree);
-  float angl = degree;
+  uint32_t angl = degree;
   if ((_servoData.speed >= SERVO_SPEED_MUL) && (_servoData.startPos != SERVO_POS_UNKOWN)) {
     // Servo mit vorgegebener Geschwindigkeit bewegen
     servoTimer.setTime(SERVO_UPDATE);
-    _servoData.isMoving = true;
+    _servoData.flags |= FLAG_IS_MOVING;
     if (_servoData.startPos < _servoData.sollPos) {
       angl = min(_servoData.sollPos, _servoData.startPos+_servoData.speed/SERVO_SPEED_MUL);
     }
@@ -293,6 +290,10 @@ void I2cServo::write(uint16_t degree){
       angl = max(_servoData.sollPos, _servoData.startPos-_servoData.speed/SERVO_SPEED_MUL);
     }
   }
+  else {
+    servoTimer.setTime(SERVO_PAUSE);
+  }
+  _servoData.flags &= ~FLAG_IN_AUTO_OFF;  // Flag IN_AUTO_OFF auf false setzen
   uint16_t pwm = (angl * PWM_RANGE) / 180 + MIN_SERVO_PWM;
   #ifdef DEBUG
     DB_PRINT_("I2cServo::write(). Pin: %d, Degree: '%d',", _servoData.pin, degree);
@@ -304,15 +305,20 @@ void I2cServo::setSpeed(int speed){
   _servoData.speed = byte(speed);
 }
 uint8_t I2cServo::read(){
-  float pwm = pwmController.getChannelPWM(_servoData.pin);
+  if (_servoData.flags & FLAG_IN_AUTO_OFF) return _servoData.sollPos;
+  uint32_t pwm = pwmController.getChannelPWM(_servoData.pin);
   #ifdef DEBUG
-    DB_PRINT ("I2cServo::read(). Pin %d, pwm: '%d'", _servoData.pin, word(pwm));
+    DB_PRINT ("I2cServo::read(). Pin %d, pwm: '%d'", _servoData.pin, pwm);
   #endif
   // PWM in Grad umrechnen. Wertebereich 0° bis 180°.
-  pwm = (pwm - MIN_SERVO_PWM) * 180.0 / PWM_RANGE;
-  return byte(roundf(pwm));
+  // rechne mit mikrosekunden für eine bessere Genauigkeit
+  pwm = ((pwm - MIN_SERVO_PWM) * 180000) / PWM_RANGE;
+  // nun das Ergebnis runden und auf millisekunden reduzieren
+  pwm = (pwm + 500) / 1000;
+  return byte(pwm);
 }
 uint8_t I2cServo::moving(){
+  if (_servoData.flags & FLAG_IN_AUTO_OFF) return 0;
   uint8_t akt = read();
   #ifdef DEBUG
     DB_PRINT ("I2cServo::moving(). Pin %d, degree: '%d'", _servoData.pin, akt);
@@ -331,7 +337,7 @@ uint8_t I2cServo::moving(){
 void I2cServo::process(){
   // so lange der Timer läuft muss nichts getan werden
   if (servoTimer.running()) return;
-  if (_servoData.isMoving) {
+  if (_servoData.flags & FLAG_IS_MOVING) {
     // Servo wird mit Geschwindigkeitskontrolle bewegt. Nächsten Schritt berechnen und setzen
     uint8_t angl;
     if (_servoData.startPos < _servoData.sollPos) {
@@ -348,7 +354,7 @@ void I2cServo::process(){
     pwmController.setChannelPWM(_servoData.pin, pwm);
     if (angl == _servoData.sollPos) {
       // Zielposition ist erreicht
-      _servoData.isMoving = false;
+      _servoData.flags &= ~FLAG_IS_MOVING;
       _servoData.startPos = _servoData.sollPos;
       servoTimer.setTime(SERVO_PAUSE);
     }
@@ -359,8 +365,9 @@ void I2cServo::process(){
   }
   else {
     // Servo wurde nun einige Zeit nicht bewegt
-    if (servoTimer.expired() && _servoData.autoOff){
+    if (servoTimer.expired() && (_servoData.flags & FLAG_AUTO_OFF)){
       // PWM Signal ausschalten
+      _servoData.flags |= FLAG_IN_AUTO_OFF;
       pwmController.setChannelOff(_servoData.pin);
     }
   }
