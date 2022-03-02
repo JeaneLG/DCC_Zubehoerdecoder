@@ -104,8 +104,10 @@ void MySoftLed::process() {
 
 //------------ I2cSoftLed methods --------------------
 I2cSoftLed::I2cSoftLed() {
+#ifdef USE_I2C
   _ledData.invFlg = true;
   _ledData.state = NOTATTACHED;
+#endif
 }
 #ifdef USE_I2C
 uint8_t I2cSoftLed::attach(uint8_t i2cPin, uint8_t invArg) {
