@@ -292,15 +292,20 @@ Fservo::Fservo( int cvAdr, uint8_t pins[], uint8_t posZahl, int8_t modeOffs ) {
     // Servowerte und Relaisausgang initiieren und ausgeben
     if ( getParam(_modeOffs) & SAUTOBACK )  _istPos = 0;
     else                                    _istPos = getParam( STATE );
-    _sollPos = _istPos ;
+    _sollPos = _istPos;
     _flags.relOn = _istPos;
     if ( posZahl > 2 ) {
         // 4-Position-Servo: Relais immer entsprechend aktueller Position setzen
         _digitalWrite( _outP[_relIx[_istPos]], ON );
     } else {
         // Servo mit 2 Positionen ( Mittenumschaltung oder 2 Relais mit Positions-Schaltung )
-        _digitalWrite( _outP[REL1P], _flags.relOn );
-        _digitalWrite( _outP[REL2P], !_flags.relOn );
+        if (getParam( _modeOffs ) & INVRELAIS) {
+            _digitalWrite( _outP[REL1P], !_flags.relOn );
+            _digitalWrite( _outP[REL2P], _flags.relOn );
+        } else {
+            _digitalWrite( _outP[REL1P], _flags.relOn );
+            _digitalWrite( _outP[REL2P], !_flags.relOn );
+        }
     }
     _flags.sollAct = false;
     _flags.moving = false;
@@ -376,16 +381,30 @@ void Fservo::process() {
     // Relaisausgänge setzen
     if ( _outP[REL2P] == NC && _posZahl == 2  ) {
         // Variante mit einem Relais, wird in Bewegungsmitte umgeschaltet
-        _digitalWrite( _outP[REL1P], _flags.relOn );
+        if (getParam( _modeOffs ) & INVRELAIS) {
+            _digitalWrite( _outP[REL1P], !_flags.relOn );
+        } else {
+            _digitalWrite( _outP[REL1P], _flags.relOn );
+        }
     } else {
         // Variante mit 2 oder 4 Relais, während der Bewegung alle Relais abschalten
         if ( _flags.moving ) {
             for ( byte i=0; i<_posZahl; i++ ) {
-                _digitalWrite( _outP[_relIx[i]], OFF );
+                if (getParam( _modeOffs ) & INVRELAIS) {
+                    // Invertierte Relais: während Bewegung alle Relais einschalten
+                    _digitalWrite( _outP[_relIx[i]], ON );
+                } else {
+                    _digitalWrite( _outP[_relIx[i]], OFF );
+                }
             }
         } else {
-            // im Stillstand des Servos entsprechend relaisout schalten
-            _digitalWrite( _outP[_relIx[_sollPos]], ON );
+            if (getParam( _modeOffs ) & INVRELAIS) {
+                // Invertierte Relais: im Stillstand der Servos entsprechendes Relais ausschalten
+                _digitalWrite( _outP[_relIx[_sollPos]], OFF );
+            } else {
+                // im Stillstand des Servos entsprechend relaisout schalten
+                _digitalWrite( _outP[_relIx[_sollPos]], ON );
+            }
         }
     }
     

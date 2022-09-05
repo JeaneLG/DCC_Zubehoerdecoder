@@ -111,7 +111,8 @@ void _digitalWrite( byte port, byte state ) ;
 #define NOPOSCHK 0x08   // Die Ausgänge reagieren auch auf einen Befehl, wenn die aktuelle
                         // Postion nicht verändert wird.
 #define SAUTOBACK 0x04  // Servo fährt automatisch in die Grundstellung zurück (nach Zeitablauf)
-#define SAUTOTIME 2000 // Defaultwert ( wenn State-Parameter = 0 ist )
+#define INVRELAIS 0x80  // Die Relais Ausgänge werden invertiert zur Servoposition geschaltet
+#define SAUTOTIME 2000  // Defaultwert ( wenn State-Parameter = 0 ist )
 #define F2OFFSET    5   // Offset für die Paramter des 2. Servo auf einer Adresse
 
 class Fservo {

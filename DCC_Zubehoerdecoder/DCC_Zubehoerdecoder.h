@@ -57,6 +57,7 @@ const byte modePin      =   13;     // Anzeige Betriebszustand (Normal/Programmi
 #define STATICRISE  (250/50 << 4) // Softled riseTime = 250 ( max = 750 )
 #define COILMOD     NOPOSCHK|CAUTOOFF
 #define SERVOMOD    SAUTOOFF|NOPOSCHK|SDIRECT //|SAUTOBACK
+#define SERVOMODI   SERVOMOD|INVRELAIS //Modbyte für Servo mit invertierten Relaisausgsng
 #define SERVO0MOD   SERVOMOD    // Modbyte für Folgeservo (FSERVO0)
 #define STATICMOD   CAUTOOFF|BLKSOFT|BLKSTRT|STATICRISE    // Wechselblinker mit beiden Leds an beim Start            
 const byte iniTyp[]     =   {    FSERVO,  FSERVO0,   FSIGNAL2,   FSIGNAL0,   FVORSIG,   FCOIL };
