@@ -653,7 +653,7 @@ void ifc_notifyCVChange( uint16_t CvAddr, uint8_t Value ) {
             // prüfen ob Ausgang einen Servo ansteuert:
             switch ( iniTyp[wIx] ) {
               case F2SERVO:
-                // verbunde Servos - prüfen zu welchem Servo der CV gehört
+                // verbundene Servos - prüfen zu welchem Servo der CV gehört
                 if (  parIx >= 5 ) {
                   // 2. Servo 
                     chkServoCv( Fptr.twoServo[wIx]->servo2, Value, parIx-PAR1-5, 0 );

@@ -29,19 +29,21 @@ void _pinMode( byte port, WiringPinMode mode ) {
 #else
 void _pinMode( byte port, byte mode ) {
 #endif
+    if ( port == NC ) return;
 #ifdef USE_I2C
 	if ( (port & I0) == I0 ) {                     // Der Pin ist auf dem PCA9685 Controller
 		#ifdef DEBUG
 		  DB_PRINT( "_pinMode: I2C Address detected: %d", (port & I0) - I0 );
 		#endif
 	}
-	else if ( port != NC ) pinMode( port,  mode );
+	else pinMode( port,  mode );
 #else
-    if ( port != NC ) pinMode( port,  mode );
+    pinMode( port,  mode );
 #endif
 }
 
 void _digitalWrite( byte port, byte state ) {
+    if ( port == NC ) return;
 #ifdef USE_I2C
 	if ( (port & I0) == I0 ) {
 		#ifdef DEBUG
@@ -50,9 +52,9 @@ void _digitalWrite( byte port, byte state ) {
 		if (state) pwmController.setChannelOn(port % I0);
 		else pwmController.setChannelOff(port % I0);
 	}
-	else if ( port != NC ) digitalWrite( port, state );
+	else digitalWrite( port, state );
 #else
-    if( port != NC ) digitalWrite( port, state );
+    digitalWrite( port, state );
 #endif
 }
 //#########################  Klassendefinitionen #################################
