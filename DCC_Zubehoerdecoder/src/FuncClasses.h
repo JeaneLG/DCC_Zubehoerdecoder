@@ -44,6 +44,9 @@ void _digitalWrite( byte port, byte state ) ;
 //---------------------- FCOIL -------------------------------------------
 // Flags für CV 'MODE'
 #define CAUTOOFF 0x01   // Die Impulsdauer wird intern begrenzt
+#define CINVERT  0x02	// Pin 3 invertiert ausgeben ( wenn aktiv )
+#define CSTATIC  0x04   // Pin1/2 lassen sich unabhängig schalten ( können auch beide aktiv sein )
+						// keine Abschaltung per Timer, EIN/AUS nur über DCC
 #define NOPOSCHK 0x08   // Die Ausgänge reagieren auch auf einen Befehl, wenn die aktuelle
                         // Postion nicht verändert wird.
  
@@ -75,26 +78,28 @@ void _digitalWrite( byte port, byte state ) ;
 // Flags für CV 'MODE':
 #define BLKMODE 0x01    // Ausgänge blinken
 #define BLKSTRT 0x02    // Starten mit beide Ausgängen EIN
+#define FSTAINV 0x02    // Im extended Mode Pin invertieren
 #define BLKSOFT 0x04    // Ausgänge als Softleds
-
-
+#define MODEOFFS   3	// CV's pro pin im extended Mode
  class Fstatic {
     // statisches oder blinkendes Ansteuern von Led's
     public:
-    Fstatic( int cvAdr, uint8_t ledP[]  );
+    Fstatic( int cvAdr, uint8_t ledP[], bool extended=false  );
     void process( );
     void set( bool sollWert );       // neuen Schaltbefehl erhalten
 
     private:
-    void _setLedPin( uint8_t ledI, uint8_t sollWert );
-    MoToTimer _pulseT;
-    
+    void _setLedPin( uint8_t ledI, bool sollWert );
+    MoToTimer _pulseT[3];
+	
     uint16_t _cvAdr;            // Adresse des CV-Blocks mit den Funktionsparametern
-    SoftLed *_ledS[2] = { NULL, NULL };      // Softled-Objekte
-    uint8_t *_ledP;           // Pins der Leds
+    SoftLed *_ledS[3] = { NULL, NULL, NULL };      // Softled-Objekte
+    uint8_t *_ledP;         // Pins der Leds
+	uint8_t _pinStat = 0;		// bitcodierter Pinstatus
     struct {
         bool blkOn :1;      // blinkende Led ist EIN
         bool isOn  :1;      // Funktion is eingeschaltet
+		bool extended :1;	// true= extended Mode mit max 3 Pins
     } _flags;       
     
  };
@@ -184,7 +189,8 @@ const byte  LSMODE=0,                 BILD1=1,              BILD2=2, VORSIG=3,  
     void    _setSignalStatic ();       // aktuelles Signalbild einschalten ( statische Led's )
     void    _setSignalBlink ();         // aktuelles Signalbild schalten ( blionkede Led's )
     uint8_t _getHsMask ();             // Maske für Hard/Soft Umschaltung aller Ausgänge bestimmen
-    void    _getSigMask( uint8_t ) ;   // Bitmaske der Ausgänge für aktuelles Signalbild bestimmen
+    uint8_t _getSigMask( uint8_t ) ;   // Bitmaske der Ausgänge für aktuelles Signalbild bestimmen
+									   // zurückgegeben wird die statische Maske ( für Test auf 0xff )
     
     Fsignal **_vorSig;              // Pointer auf Vorsignal am gleichen Mast
     MoToTimer darkT;                // Dunkelzeit beim Überblenden zwischen Signalbildern

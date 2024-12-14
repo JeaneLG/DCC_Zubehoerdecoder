@@ -98,4 +98,24 @@
                         um mit einem 2. Arduino ein Taster-Stellpult zu realisiern.
                       - JMRI Decoderfiles können auch für die DCC-Schnittstelle generiert werden
                         
-                      
+    Version 7.1.0   - Neue Funktion für FSTATIC und FCOIL:
+						es kann ein 3. Ausgabe-Pin definiert werden. Dieser gibt den aktuellen DCC-Zustand der Adresse wieder
+					- Neue Funktione FSTATIC3 ( FSTATIC extended Mode ):
+						Mit dieser Funktion können bis zu 3 Pins angesteuert werden.
+						Individuell für jeden Pin einstellbar:
+						- Statisch oder Blinken
+						- hart oder soft umschalten
+						- invertiert
+						- Blinkfrequenz
+						Damit lassen sich z.B. auch 2 Ausgänge parallel schalten.
+					- FCOIL:    bei gesetztem (neuen)Flag 'CSTATIC' werden die Ausgägne ausschließlich über DCC Befehle
+					            gesteuert. Es können auch beide Ausgägne parallel aktiv sein.
+					- FSIGNAL: 	Das Ignoriereren von Befehlen durch setzen des Bitmusters auf 255 funktioniert wieder.
+					Bugfix: 2. Folgeadresse bei Vorsignalen berücksichtigt.
+					Dokumentation erweitert und Fehler korrigiert.
+
+     Version 7.1.1	- Fehler in der Standard DCC_Zubehoerdecoder.h beseitigt. Die erste Zeile für ein alternatives Konfig-File 
+					  war nicht auskommentiert, so dass immer eine Konfig aus den Beispielen verwendet wurde.    
+
+     Version 7.1.2	- Bei einem Servo mit 2 Relais waren nach Reset bis zum ersten Weichenbefehl beide Relais angezogen.
+					  

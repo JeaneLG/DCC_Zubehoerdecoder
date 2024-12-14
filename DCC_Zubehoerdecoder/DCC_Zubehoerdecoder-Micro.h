@@ -1,11 +1,14 @@
 //#define KONFIG_FILE "examples\DCC_Zubehoerdecoder-Micro1.h"  // Pfad zu einer alternativen Konfig-Datei
+//#define KONFIG_FILE "TestKonf\DCC_ZubehoerdecoderV71-Micro.h"  // Pfad zu einer alternativen Konfig-Datei
+//#define KONFIG_FILE "TestKonf\V71-Micro-Signal3.h"  // Pfad zu einer alternativen Konfig-Datei
+//#define KONFIG_FILE "examples\DCC_Zubehoerdecoder_STATIC_COIL.h"  // Pfad zu einer alternativen Konfig-Datei
 #if !defined( KONFIG_FILE ) || defined ( EXEC_KONFIG )
 
 // ----------------- DCC-Zubehördecoder ---------------------------------------
 // Diese Datei enthält die vom Anwender änderbaren Parameter um den Zubehördecoder an die 
 // gewünschte Funktionalität und die verwendete HW anzupassen
 
-//#define IFC_SERIAL  Serial  // Isr der define aktiv, können Kommandos auch über die serielle Schnittstelle abgesetzt werden
+//#define IFC_SERIAL  Serial  // Ist der define aktiv, können Kommandos auch über die serielle Schnittstelle abgesetzt werden
 #define SERIAL_BAUD 115200
 
 // Beispiel für Variante mit Licht-Ausfahrsignal mit Vorsignal, mit Betriebsmode Led an Pin 13 (interne Led)
@@ -54,14 +57,15 @@ const int  PomAddr          = 50;    // Adresse für die Pom-Programmierung ( CV
 const byte modePin      =   13;     // Anzeige Betriebszustand (Normal/Programmierung) (Led)
 
 #define STATICRISE  (250/50 << 4) // Softled riseTime = 250
-#define COILMOD     NOPOSCHK|CAUTOOFF
+//#define COILMOD     NOPOSCHK|CAUTOOFF
+#define COILMOD     CSTATIC
 #define SERVOMOD    SAUTOOFF|NOPOSCHK|SDIRECT //|SAUTOBACK
 #define SERVO0MOD   SERVOMOD    // Modbyte für Folgeservo (FSERVO0)
 #define SERVOMOD2    SAUTOOFF|NOPOSCHK|SDIRECT |SAUTOBACK
 #define STATICMOD   CAUTOOFF|BLKSOFT|BLKSTRT|STATICRISE    // Wechselblinker mit beiden Leds an beim Start            
 const byte iniTyp[]     =   {    FSERVO,  FSERVO0,   FSIGNAL2,   FSIGNAL0,   FVORSIG,   FCOIL ,      F2SERVO };
 const byte out1Pins[]   =   {       A0,        A1,   /*rt*/ 9,   /*rt*/10,  /*ge*/12,        0,          3 };  // output-pins der Funktionen
-const byte out2Pins[]   =   {       16,        17,   /*gn*/11,   /*ws*/ 8,  /*gn*/13,        1,         1 };
+const byte out2Pins[]   =   {       16,        17,   /*gn*/11,   /*ws*/ 8,  /*gn*/13,        15,         1 };
 const byte out3Pins[]   =   {       NC,        NC,   /*ge*/ 7,         NC,        NC,       NC,          5 };
 
 const byte iniCVx[10][sizeof(iniTyp)]  = {

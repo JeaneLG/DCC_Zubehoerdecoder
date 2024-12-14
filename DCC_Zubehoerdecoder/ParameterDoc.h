@@ -60,7 +60,7 @@
  *  
  *  FSERVO0 verbundene Servos, muss unittelbar hinter FSERVO stehen ( Folgeadresse )
  *         Ist die Pinnr identisch zum Eintrag unter FSERVO, so wird nur 1 Servo eingerichtet, 
- *         dass auf 4 Positionen gestellt werden kann. Die Einträge von CV120und CV53/54 sind
+ *         dass auf 4 Positionen gestellt werden kann. Die Einträge von CV120und CV123/124 sind
  *         dann im FSERVO0 Eintag belanglos.
  *         Enthält FSERVO0 eine unterschiedliche Pinnr für das Servo, so werden zwei Servos
  *         eingerichtet. Das Modusbyte von FSERVO gilt dann fur beide. Die Lage der Servos kann
@@ -85,6 +85,8 @@
  *  FCOIL Doppelspulenantrieb: ( derzeit nur mit automatischer Abschaltung )
  *  CV120   Bit0 = 1: (CAUTOOFF) Spulenausgang nur automatisch abschalten
  *               = 0: Spulenausgang auch über DCC-Befehl abschalten
+ *          Bit2 = 1: Spulenausgänge nur über DCC/LocoNet steuern. Bit0/3 haben keine Bedeutung
+ *               = 0: Normalbetrieb
  *          Bit3 = 1: (NOPOSCHK) kein Überprüfung auf Weichenposition. Gegebenenfalls wird auch an gleichen
  *                    Anschluss wiederholt ein Puls ausgegeben
  *  CV121   Einschaltdauer der Spule  ( in 10ms Einheiten ) 
@@ -101,9 +103,23 @@
  *  CV121   Einschaltzeit des Blinkens ( 10ms Einheiten )
  *  CV122   Ausschaltzeit des Blinkens ( 10ms Einheiten )
  *  CV123   1. Einschaltzeit beim Start des Blinkens
- *  CV124   aktueller Zusatnd ( nicht manuell verändern! )
+ *  CV129   aktueller Zustand ( nicht manuell verändern! )
  *  
- *  FSIGNAL2 Lichtsignalfunktion mit 1..3 Weichenadressen 
+ *  FSTATIC3 statischer/Blinkender Ausgang - extended Mode
+ *  CV120..122  Werte für out1Pins
+ *  CV123..125  Werte für out2Pins
+ *  CV126..128  Werte für out3Pins
+ *  CV120   Bit0 = 1: (BLKMODE) Blinken,  0: statisch
+ *          Bit1 = 1: (FSTAINV) Ausgang wird invertiert angesteuert
+ *          Bit2 = 1: (BLKSOFT) mit weichem Auf/Abblenden 
+ *          Bit4..7:  Risetime ( in 50ms Einheiten, 0=default von 500 )
+ *  CV121   Einschaltzeit des Blinkens ( 10ms Einheiten ) wenn 0 gibt es kein Blinken
+ *  CV122   Ausschaltzeit des Blinkens ( 10ms Einheiten ) wenn 0 gilt Ausschaltzeit=Einschaltzeit
+ *  CV123..125  wie 120..122 für out2Pins
+ *  CV126..128  wie 120..122 für out3Pins
+ *  CV129   aktueller Zustand ( nicht manuell verändern! )
+ *  
+*  FSIGNAL2 Lichtsignalfunktion mit 1..3 Weichenadressen 
  *          bei den Folgeadressen ist als Typ FSIGNAL0 einzutragen
  *          Lichtsignale starten beim Einschalten immer im Zustand 0 (Bitmuster CV51)
  *  CV120   Signalmodus: 
@@ -128,8 +144,8 @@
  *  FSIGNAL0 1. Folgeadresse (optional)
  *  CV130   Bit 2.. 0 Bitmuster hard/soft gibt an, welche Ausgänge 'hart' umschalten (Bit=1)
  *          und Welche Ausgänge weich überblenden (Bit=0)
- *  CV131   Bitmuster der Ausgänge für Befehl 2.Adresse 0 (rot)
- *  CV132   Bitmuster der Ausgänge für Befehl 2.Adresse 1 (grün)
+ *  CV131   Bitmuster der Ausgänge für Befehl 2.Adresse 0 (rot)  (255: Befehl ignorieren)
+ *  CV132   Bitmuster der Ausgänge für Befehl 2.Adresse 1 (grün) (255: Befehl ignorieren)
  *  CV133   reserved
  *  CV134   reserved
  *  CV135   Bitmuster der blinkenden Leds für Befehl 2.Adresse 0 (rot)

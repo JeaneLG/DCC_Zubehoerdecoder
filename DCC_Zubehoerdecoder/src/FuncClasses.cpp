@@ -28,7 +28,10 @@ void _pinMode( byte port, byte mode ) {
 }
 
 void _digitalWrite( byte port, byte state ) {
-    if( port != NC ) digitalWrite( port, state );
+    if( port != NC ) {
+		digitalWrite( port, state );
+		//DBSV_PRINT("DW: Pin%d=%d", port,state );
+	}
 }
 //#########################  Klassendefinitionen #################################
 
@@ -39,17 +42,35 @@ Fcoil::Fcoil( int cvAdr, uint8_t out1P[] ) {
     // Konstruktor für Doppelspulenantriebe
     _cvAdr = cvAdr;
     _outP = out1P;
-    DBCL_PRINT( "Fcoil CV=%d, OutPins %d,%d ", _cvAdr, _outP[0], _outP[1] );
+    DBCL_PRINT( "Fcoil CV=%d, OutPins %d,%d,%d ", _cvAdr, _outP[0], _outP[1], _outP[2] );
     
-    for ( byte i=0; i<2; i++ ) {
+    for ( byte i=0; i<3; i++ ) {
         _pinMode( _outP[i], OUTPUT );
         _digitalWrite( _outP[i], LOW );
     }
-    _flags.pulseON = false;
-    _flags.sollCoil = getParam( STATE )&1;
-    _flags.istCoil = !_flags.sollCoil;
-    _flags.sollOut = 0;
-    _flags.sollAct = true;
+	if ( getParam( MODE) & CSTATIC ) {	
+		// im STATIC Mode Ausgänge setzen
+		byte lastState = getParam( STATE );
+		if ( getParam( MODE) & CINVERT ) {
+			_digitalWrite( _outP[0], !(lastState & 1) );
+			_digitalWrite( _outP[1], !(lastState & 2) );
+		} else {
+			_digitalWrite( _outP[0], lastState & 1 );
+			_digitalWrite( _outP[1], lastState & 2 );
+		}
+		_flags.pulseON =0;
+		_flags.sollCoil = 0;
+		_flags.istCoil = 0;
+		_flags.sollOut = 0;
+		_flags.sollAct = 0;
+	} else {
+		// flags für Bearbeitung in process() setzen	
+		_flags.pulseON = false;
+		_flags.sollCoil = getParam( STATE )&1;
+		_flags.istCoil = !_flags.sollCoil;
+		_flags.sollOut = 0;
+		_flags.sollAct = true;
+	}
 }
 //..............    
 void Fcoil::set( uint8_t dccSoll, uint8_t dccState ) {
@@ -57,10 +78,31 @@ void Fcoil::set( uint8_t dccSoll, uint8_t dccState ) {
     _flags.sollCoil = dccSoll;
     _flags.sollOut = dccState;
     _flags.sollAct = true;
+	if ( getParam( MODE) & CSTATIC ) {
+		// im STATIC Mode werden die Ausgänge direkt geschaltet
+		if ( getParam( MODE) & CINVERT ) {
+			digitalWrite( _outP[dccSoll], !dccState  );
+			setState( !digitalRead(_outP[0]) | ((!digitalRead(_outP[1]))<<1) );
+		} else {
+			digitalWrite( _outP[dccSoll], dccState  );
+			setState( digitalRead(_outP[0]) | (digitalRead(_outP[1])<<1) );
+		}
+	} else {
+		// Schalten der Ausgänge in process()
+		_flags.sollCoil = dccSoll;
+		_flags.sollOut = dccState;
+		_flags.sollAct = true;
+	}
+	// Wenn 3. Pin definiert ist, den Sollzustand ausgeben ( invertiert, wenn CINVERT Bit gesetzt ).
+	_digitalWrite( _outP[2], (getParam(MODE) & CINVERT)? !_flags.sollCoil : _flags.sollCoil );
+    DBCL_PRINT( "SetFcoil OutPins %d,%d,%d ", digitalRead(_outP[0]), digitalRead(_outP[1]), digitalRead(_outP[2]) );
 }
 
 //..............    
 void Fcoil::process() {
+	// In STATIC mode keine Bearbeitung per Timer, EIN/AUS direkt in set-Methode
+	if ( getParam( MODE) & CSTATIC) return;
+	
         // Pulseausgägne einschalten
     if (  !_flags.pulseON && !_pulseT.running() &&  _flags.sollAct ) {
         // Aktionen am Ausgang nur wenn kein aktiver Impuls und der Pausentimer nicht läuft
@@ -72,12 +114,12 @@ void Fcoil::process() {
             if ( (_flags.sollCoil & 1) == 0 ) {
                 // Out1 aktiv setzen
                 _digitalWrite( _outP[0], HIGH );
-                _digitalWrite( _outP[1], LOW );
+                if ( _outP[0] != _outP[1] ) _digitalWrite( _outP[1], LOW );
                 //DBCL_PRINT( "Pin%d HIGH, Pin%d LOW", _outP[0], _outP[1] );
             } else {
                 // Out2 aktiv setzen
                 _digitalWrite( _outP[1], HIGH );
-                _digitalWrite( _outP[0], LOW );
+                if ( _outP[0] != _outP[1] ) _digitalWrite( _outP[0], LOW );
                 //DBCL_PRINT( "Pin%d LOW, Pin%d HIGH", _outP[0], _outP[1] );
             }
             _flags.pulseON = true;
@@ -119,100 +161,138 @@ void Fcoil::process() {
 //------------------------FSTATIC -------------------------------------------- 
 // Ansteuerung von statischen/blinkenden Leds
 
-Fstatic::Fstatic( int cvAdr, uint8_t ledP[] ) {
+Fstatic::Fstatic( int cvAdr, uint8_t ledP[], bool extended ) {
     // Konstruktor der Klasse für statisches Leuchten bzw. blinken
+	byte modeOffs = 0;	// Im normalen Mode gibt es nur ein Modebyte
     _cvAdr = cvAdr;
     _ledP = ledP;
-    DBST_PRINT( "Fstatic CV=%d, LedPis %d,%d ", _cvAdr, _ledP[0], _ledP[1] );
-    // Modi der Ausgangsports
-    if ( getParam( MODE ) & BLKSOFT ) {
+	_flags.extended = extended;
+	if ( extended ) {
+		modeOffs = 3;	// Im extended Mode hat jeder Pin sein eigenes Mode-Byte
+	}
+
+    DBST_PRINT( "Fstatic,%d CV=%d, LedPins %d,%d, %d ", extended, _cvAdr, _ledP[0], _ledP[1], _ledP[2] );
+    // Ausgangsports einrichten
+	for ( byte pNr=0; pNr < 3; pNr++ ) {
+		byte modeIx = MODE+(pNr*modeOffs);
+		// Der 3.Pin kann nur im extended mode ein SoftLed sein
+		if ( (getParam( modeIx ) & BLKSOFT) && (extended || pNr != 2 ) ) {
         // Ausgangsports als Softleds einrichten
-        for ( byte i=0; i<2; i++ ) {
-            if ( _ledP[i] != NC ) {
-                _ledS[i] = new SoftLed;
+            if ( _ledP[pNr] != NC ) {
+                _ledS[pNr] = new SoftLed;
                 byte att;
                 int rise;
-                att=_ledS[i]->attach( _ledP[i] );
-                rise = (getParam(MODE) >> 4) * 100;
+                att=_ledS[pNr]->attach( _ledP[pNr] );
+                rise = (getParam(modeIx) >> 4) * 100;
                 if ( rise == 0 ) rise = 500; // defaultwert
-                _ledS[i]->riseTime( rise );
-                _ledS[i]->write( OFF, LINEAR );
-               DBST_PRINT( "Softled, pin %d, Att=%d", _ledP[i], att );
+                _ledS[pNr]->riseTime( rise );
+                _ledS[pNr]->write( OFF, LINEAR );
+                DBST_PRINT( "Softled, pin %d, Att=%d", _ledP[pNr], att );
             }
-        }
-    } else {
-        _pinMode( _ledP[0], OUTPUT );
-        _pinMode( _ledP[1], OUTPUT );
-        DBST_PRINT( "Hardled, pins %d,%d ", _ledP[0], _ledP[1] );
-    }
+		} else {
+        _pinMode( _ledP[pNr], OUTPUT );
+        DBST_PRINT( "Hardled, pin %d ", _ledP[pNr] );
+		}
+	}
     // Grundstellung der Ausgangsports
     _flags.isOn = !getParam( STATE );
     _flags.blkOn = false;       // Blinken startet mit AUS
     set( getParam( STATE ) );
-    /*
-    if ( getParam( MODE ) & BLKMODE ) {
-        // aktuellen Blinkstatus berücksichtigen
-        _setLedPin(0, LOW );
-        _setLedPin(1, LOW );
-    } else {
-        // statische Ausgabe
-        _setLedPin(0, _flags.isOn );
-        _setLedPin(1, !_flags.isOn );
-    }*/
 }
 
 //..............    
 void Fstatic::set( bool sollOn ) {
     // Funktion ein/ausschalten
     if ( sollOn != _flags.isOn ) {
-        _setLedPin(0, sollOn );
-        if ( getParam( MODE) & BLKMODE ) {
-            _setLedPin(1, (getParam( MODE ) & BLKSTRT)&& sollOn ); 
-        } else {                   
-            _setLedPin(1, !sollOn );                    
-        }
-        DBST_PRINT( "Fkt=%d, Soll=%d, Ist=%d", _cvAdr, sollOn, _flags.isOn );
-        _flags.isOn = sollOn;
-        setState( _flags.isOn );
-        if ( _flags.isOn && ( getParam( MODE ) & BLKMODE ) ) {
-            // Funktion wird eingeschaltet und Blinkmode ist aktiv -> Timer setzen
-            _pulseT.setTime( getParam( PAR3)*10 );
-            DBST_PRINT( "BlkEin %d/%d, Strt=%x", getParam( PAR1) , getParam( PAR2), (getParam( MODE) & BLKSTRT)  );
-            _flags.blkOn = true;
-        }
-    }
+		if ( _flags.extended ) {
+			// extended Mode (FSTATIC3): 3 Pins aus/einschalten. Bei Blinkmode Timer starten
+			for ( byte pNr=0; pNr<3; pNr++ ) {
+				byte modeIx = MODE+(pNr*MODEOFFS);
+				_setLedPin(pNr, sollOn );
+				DBST_PRINT( "Soll=%d, Mode=%02x", sollOn, getParam( modeIx ) );
+				if ( sollOn && (getParam( modeIx ) & BLKMODE) && getParam( modeIx+1) > 0 ) {
+					// Einschalten und Blinkmodus: Timer starten
+					_pulseT[pNr].setTime( getParam( modeIx+1)*10 );
+					DBST_PRINT( "BlinkTime %d = %d", pNr, getParam( modeIx+1)*10 );
+				}
+			}
+		} else {
+			// normaler Mode ( FSTATIC )
+			_digitalWrite( _ledP[2], sollOn );	// gegebenenfalls 3.Pin statisch schalten
+			_setLedPin(0, sollOn );
+			if ( getParam( MODE) & BLKMODE ) {
+				_setLedPin(1, (getParam( MODE ) & BLKSTRT)&& sollOn ); 
+			} else {                   
+				_setLedPin(1, !sollOn );                    
+			}
+			DBST_PRINT( "Fkt=%d, Soll=%d, Ist=%d", _cvAdr, sollOn, _flags.isOn );
+			if ( sollOn && ( getParam( MODE ) & BLKMODE ) ) {
+				// Funktion wird eingeschaltet und Blinkmode ist aktiv -> Timer setzen
+				_pulseT[0].setTime( getParam( PAR3)*10 );
+				DBST_PRINT( "BlkEin %d/%d, Strt=%x", getParam( PAR1) , getParam( PAR2), (getParam( MODE) & BLKSTRT)  );
+				_flags.blkOn = true;
+			}
+		}
+		_flags.isOn = sollOn;
+		setState( _flags.isOn );
+	}
 }
 
 //..............    
 void Fstatic::process( ) {
     // Blinken der Leds steuern
-    if ( _flags.isOn && ( getParam( MODE ) & BLKMODE ) ) {
-        // bei aktivem Blinken die Timer abfragen/setzen
-        if ( !_pulseT.running() ) {
-            // Timer abgelaufen, Led-Status wechseln
-            if ( _flags.blkOn ) {
-                // Led ausschalten
-                _setLedPin(0, LOW );
-                _setLedPin(1, HIGH );
-                _flags.blkOn = false;
-                _pulseT.setTime( getParam( PAR2 )*10 );
-            } else {
-                // Led einschalten
-                _setLedPin(0, HIGH );
-                _setLedPin(1, LOW );
-                _flags.blkOn = true;
-                _pulseT.setTime( getParam( PAR1 )*10 );
-            }
-        }
+    if ( _flags.isOn ) {
+		// nur im aktiven Status wird geblinkt
+	    if ( _flags.extended ) {
+			for ( byte ledI=0; ledI<3; ledI++ ) {
+				byte modeIx = MODE+(ledI*MODEOFFS);
+				if ( (getParam( modeIx ) & BLKMODE) && getParam( modeIx+1 ) > 0 && !_pulseT[ledI].running() ) {
+					// Timer abgelaufen, Led-Status wechseln
+					if ( bitRead( _pinStat, ledI ) ) {
+						// Led ausschalten
+						_setLedPin(ledI, LOW );
+						if ( getParam( modeIx+2 ) > 0 ) _pulseT[ledI].setTime( getParam( modeIx+2 )*10 );
+						else _pulseT[ledI].setTime( getParam( modeIx+1 )*10 );
+					} else { 
+						// Led einschalten
+						_setLedPin(ledI, HIGH );
+						_pulseT[ledI].setTime( getParam( modeIx+1 )*10 );
+					}
+				}
+			}
+		} else if ( getParam( MODE ) & BLKMODE ) {
+			// bei aktivem Blinken die Timer abfragen/setzen
+			if ( !_pulseT[0].running() ) {
+				// Timer abgelaufen, Led-Status wechseln
+				if ( _flags.blkOn ) {
+					// Led ausschalten
+					_setLedPin(0, LOW );
+					_setLedPin(1, HIGH );
+					_flags.blkOn = false;
+					_pulseT[0].setTime( getParam( PAR2 )*10 );
+				} else {
+					// Led einschalten
+					_setLedPin(0, HIGH );
+					_setLedPin(1, LOW );
+					_flags.blkOn = true;
+					_pulseT[0].setTime( getParam( PAR1 )*10 );
+				}
+			}
+		}
     }
 }
 
 //..............    
-void Fstatic::_setLedPin( uint8_t ledI, uint8_t sollWert ) {
-    // den LED ausgang 1/2 setzen. je nach Konfiguration als Softled oder hart
-    if ( ledI <2 ) {
-        if ( _ledS[ledI] != NULL ) _ledS[ledI]->write( sollWert);
-        else _digitalWrite( _ledP[ledI], sollWert );
+void Fstatic::_setLedPin( uint8_t ledI, bool sollWert ) {
+    // den LED ausgang setzen. je nach Konfiguration als Softled oder hart
+	bool outState = sollWert;
+    if ( ledI < 3 ) {
+		// Im extended Mode Ausgabewert gegebenenfalls invertieren
+		if ( _flags.extended && ( FSTAINV & getParam( MODE+(MODEOFFS*ledI) ) ) ) outState = !outState; 
+        if ( _ledS[ledI] != NULL ) _ledS[ledI]->write( outState);
+        else _digitalWrite( _ledP[ledI], outState );
+		bitWrite( _pinStat, ledI, sollWert );
+		DBST_PRINT( "Pin: %d, Val: %d, pStat=%02x", _ledP[ledI], outState, _pinStat );
     }
 }
 
@@ -246,18 +326,19 @@ Fservo::Fservo( int cvAdr, uint8_t pins[], uint8_t posZahl, int8_t modeOffs ) {
     else                                    _istPos = getParam( STATE );
     _sollPos = _istPos ;
     _flags.relOn = _istPos;
-    if ( posZahl > 2 ) {
+	// 11.8.23 ( V7.1.2) Relais werden imer in .process geschaltet
+    /*if ( posZahl > 2 ) {
         // 4-Position-Servo: Relais immer entsprechend aktueller Position setzen
         _digitalWrite( _outP[_relIx[_istPos]], ON );
     } else {
         // Servo mit 2 Positionen ( Mittenumschaltung oder 2 Relais mit Positions-Schaltung )
         _digitalWrite( _outP[REL1P], _flags.relOn );
         _digitalWrite( _outP[REL2P], !_flags.relOn );
-    }
+    }*/
     _flags.sollAct = false;
     _flags.moving = false;
     _weicheS.write( getParam( posOffset[_istPos]+_parOffs ) );
-    DBSV_PRINT("ServoObj@%04x, Pins=%04x, cvAdr=%d, modeOffs=%d", (uint32_t)this , _outP, _cvAdr, _modeOffs);
+    DBSV_PRINT("ServoObj@%04x, Pins=%d %d %d %d %d %d , cvAdr=%d, modeOffs=%d", (uint32_t)this , _outP[0],_outP[1],_outP[2],_outP[3],_outP[4],_outP[5], _cvAdr, _modeOffs);
     DBSV_PRINT("ModeByte=%02x", getParam( _modeOffs ) ) ;
    
 }
@@ -315,7 +396,6 @@ void Fservo::process() {
         }
     } else if ( _flags.sollAct  && (_sollPos != _istPos || (getParam( _modeOffs) & NOPOSCHK))  ) {
         // Weiche muss umgestellt werden
-        DBSV_PRINT( "Weiche stellen, Ist=%d,Soll=%d", _istPos, _sollPos );
         _istPos = _sollPos;    // Istwert auf Sollwert 
         _flags.moving = true;               // und MOVING-Flagt setzen.
         DBSV_PRINT("Servo-write=%d", getParam( posOffset[_sollPos]+_parOffs ) );
@@ -336,8 +416,6 @@ void Fservo::process() {
             _digitalWrite( _outP[_relIx[_sollPos]], ON );
         }
     }
-    
-   
 }
 //..............    
 bool Fservo::isMoving () {
@@ -459,11 +537,11 @@ void Fsignal::set( uint8_t sollWert ) {
     DBSG_PRINT( "setSignal, CV%d, Soll=%d, Ist=%d", _cvAdr, sollWert,  _fktStatus.sigBild );
     if (  _fktStatus.sigBild != sollWert ) {
         // Sollzustand hat sich verändert, püfen ob erlaubter Zustand
-        /*if (  _getSigMask( sollWert) == 0xff )  {
+        if (  _getSigMask( sollWert) == 0xff )  {
             // Sollzustand hat Signalmaske 0xff -> diesen Zustand ignorieren
             // Sollzustand zurücksetzen
             DBSG_PRINT("SigMask(soll) = %02X", _getSigMask( sollWert) );
-        } else */{
+        } else {
             // Gültiger Zustand, übernehmen, Flag setzen und Timer aufziehen
             _fktStatus.sigBild =  sollWert;
             _fktStatus.state   = SIG_NEW;
@@ -528,7 +606,8 @@ uint8_t Fsignal::_getHsMask(){
 
 //..............    
 // Ausgangsmasken für Signalbild sigState bestimmen
-void  Fsignal::_getSigMask( uint8_t sigState ) {
+byte  Fsignal::_getSigMask( uint8_t sigState ) {
+	// Zurückgegeben wird die statische Maske ( für den Test auf 0xFF um Kommandos zu ignorieren )
     // sState: Signalzustand
     //static int parOffs[] = { 1,2,6,7,11,12,16,17 } ; // max 4 Adressen vorgesehen
     byte parOffs = ((sigState>>1) * CV_BLKLEN ) + (sigState&1)  +1;
@@ -541,7 +620,7 @@ void  Fsignal::_getSigMask( uint8_t sigState ) {
     _sigMask.blnkStd =  blinkMask & ~staticMask; // nur Bit in blnkMask gesetzt
     _sigMask.blnkInv =  staticMask & blinkMask;  // Bit in beiden Masken gesetzt
     DBSG_PRINT("  ..static=%02X, blk=%02X, inv=%02X", _sigMask.staticLed, _sigMask.blnkStd, _sigMask.blnkInv );
-   return;
+   return staticMask;
 }
 
 //.............. 

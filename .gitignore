@@ -18,10 +18,13 @@ $RECYCLE.BIN/
 *.lnk
 
 #Files
+*.bak
 PH.txt
 PH.rtf
 .gitignore
 .gitattributes
+Formsignale.odt
+*.bak
 
 #Directory:
 Zusatzinfo

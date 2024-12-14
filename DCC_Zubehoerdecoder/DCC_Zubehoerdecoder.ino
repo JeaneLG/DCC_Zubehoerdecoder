@@ -26,7 +26,7 @@
     So sind z.B. bei Servoausgängen die Endlagen per CV-Wert einstellbar, bei Lichtsignalen ist die 
     Zuordnung der Ausgangszustände zum Signalzustand frei konfigurierbar.
 */
-#define DCC_DECODER_VERSION_ID 0x70
+#define DCC_DECODER_VERSION_ID 0x71
 
 #include "src/FuncClasses.h"
 #ifdef __AVR_MEGA__
@@ -61,7 +61,8 @@
 #define FVORSIG     6 // 1. Vorsignaladresse
 #define FSERVO0     7 // Folgeadresse bei 2 gekoppelten Servos
 #define F2SERVO     8 // Klasse zur Steuerung von 2 Servos über eine Adresse
-#define FMAX        8  
+#define FSTATIC3    9 // 3 Ausgänge können statisch/blinkend ein bzw ausgeschaltet werden
+#define FMAX        9  
 
 //---------------------------------------
 //Flags für iniMode:
@@ -310,7 +311,7 @@ void setup() {
                     // nein, 2 Servos mit kombinatorischer Ansteuerung
                     // das 2. Servo greift auf das Modbyte des 1. Servos zu, da das Mod-Byte
                     // des 2. Servos die Stellungskombinatorik enthält
-                     Fptr.servo[wIx] = new Fservo( cvParAdr(wIx,0) , &ioPins[wIx*PPWA], 2 );
+                    Fptr.servo[wIx] = new Fservo( cvParAdr(wIx,0) , &ioPins[wIx*PPWA], 2 );
                     Fptr.servo[wIx+1] = new Fservo( cvParAdr(wIx+1,0) , &ioPins[(wIx+1)*PPWA], 2, -CV_BLKLEN );
                     adressTyp[wIx] = SERVO_DOUBLE;
                 } else {
@@ -340,7 +341,8 @@ void setup() {
             Fptr.coil[wIx] = new Fcoil( cvParAdr(wIx,0) , &ioPins[wIx*PPWA] );
             break;
           case FSTATIC:
-            Fptr.stat[wIx] = new Fstatic( cvParAdr(wIx,0) , &ioPins[wIx*PPWA] );
+          case FSTATIC3:
+            Fptr.stat[wIx] = new Fstatic( cvParAdr(wIx,0) , &ioPins[wIx*PPWA], iniTyp[wIx]==FSTATIC3 );
             break;
           case FSIGNAL2:
             // Prüfen ob ein Vorsignal am Mast Dunkelgeschaltet werden muss
@@ -436,6 +438,7 @@ void loop() {
            Fptr.coil[i]->process();
             break;
           case FSTATIC: // Ausgang statisch ein/ausschalten ------------------------------------
+          case FSTATIC3:
             Fptr.stat[i]->process();
             break;
           case FVORSIG:
@@ -502,6 +505,7 @@ void setPosition( byte wIx, byte sollWert, byte state = 0 ) {
           Fptr.twoServo[wIx]->servo2->set( sollWert );
           break;
         case FSTATIC:
+        case FSTATIC3:
           Fptr.stat[wIx]->set( sollWert );
           break;
         case FCOIL:
@@ -568,19 +572,28 @@ void ifc_notifyDccAccState( uint16_t Addr, uint8_t OutputAddr, uint8_t State ){
         uint16_t vsAdr;
         if ( iniTyp[i] == FVORSIG  ) {
             // Adresse des zugehörigen Hauptsignals bestimmen
-            vsAdr = getCvPar(i, PAR3) + 256 * getCvPar(i, STATE);
+            vsAdr = getCvPar(i, PAR3) + 256 * getCvPar(i, PAR4);
             if ( vsAdr == wAddr ) {
                 DBSG_PRINT( "Vorsig0 %d, Index %d, Soll %d", wAddr, i, OutputAddr & 0x1 );
                 setPosition( i, OutputAddr & 0x1 );
                 break; // Schleifendurchlauf abbrechen, es kann nur eine Signaladresse sein
             } else {
-                // Folgeadresse ( bei mehrbegriffigen Vorsignalen ) prüfen
+                // Folgeadressen ( bei mehrbegriffigen Vorsignalen ) prüfen
                 if ( i+1 < weichenZahl && iniTyp[i+1] == FSIGNAL0 ) {
-                    // Folgeadresse vergleichen
+                    // 1. Folgeadresse vergleichen
                     if ( vsAdr+1 == wAddr ) { 
                         // Übereinstimmung gefunden, neues Signalbild setzen
                         DBSG_PRINT( "Vorsig1 %d, Index %d, Soll %d", wAddr, i, (OutputAddr & 0x1)+2  );
                         setPosition( i, (OutputAddr & 0x1)+2 );
+                    } else {
+                        if ( i+2 < weichenZahl && iniTyp[i+2] == FSIGNAL0 ) {
+                            // 2. Folgeadresse vergleichen
+                            if ( vsAdr+2 == wAddr ) { 
+                                // Übereinstimmung gefunden, neues Signalbild setzen
+                                DBSG_PRINT( "Vorsig2 %d, Index %d, Soll %d", wAddr, i, (OutputAddr & 0x1)+4  );
+                                setPosition( i, (OutputAddr & 0x1)+4 );
+                            }
+                        }
                     }
                 }
             }
